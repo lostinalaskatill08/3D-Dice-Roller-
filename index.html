@@ -81,11 +81,6 @@
             margin: 0;
             color: yellow;
         }
-        #roll-log {
-            list-style: none;
-            padding: 0;
-            margin: 10px 0 0 0;
-        }
     </style>
 </head>
 <body>
@@ -169,17 +164,7 @@
                 d20: new THREE.IcosahedronGeometry(1)
             };
 
-            // Face groups for each die type
-            const faceGroups = {
-                d4: Array.from({length: 4}, (_, i) => [i]),
-                d6: Array.from({length: 6}, (_, i) => [i*2, i*2+1]),
-                d8: Array.from({length: 8}, (_, i) => [i]),
-                d10: Array.from({length: 12}, (_, i) => [i*3, i*3+1, i*3+2]), // Approximation
-                d12: Array.from({length: 12}, (_, i) => [i*3, i*3+1, i*3+2]),
-                d20: Array.from({length: 20}, (_, i) => [i])
-            };
-
-            // Create number texture
+            // Create number texture for dice faces
             function createNumberTexture(number) {
                 const canvas = document.createElement('canvas');
                 canvas.width = 64;
@@ -193,51 +178,32 @@
                 return new THREE.CanvasTexture(canvas);
             }
 
-            // Create a die with numbered faces and normals
+            // Create a die with numbered faces
             function createDie(type) {
                 const geometry = geometries[type];
                 const material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
                 const diceMesh = new THREE.Mesh(geometry, material);
-                diceMesh.faceNormals = [];
-                diceMesh.type = type;
 
-                const position = geometry.attributes.position.array;
-                const index = geometry.index.array;
-                const group = faceGroups[type];
-
-                for (let faceIndex = 0; faceIndex < group.length; faceIndex++) {
-                    const triangles = group[faceIndex];
-                    let center = new THREE.Vector3(0, 0, 0);
-                    let normalSum = new THREE.Vector3(0, 0, 0);
-                    for (let tri of triangles) {
-                        const idx0 = index[tri * 3];
-                        const idx1 = index[tri * 3 + 1];
-                        const idx2 = index[tri * 3 + 2];
-                        const v0 = new THREE.Vector3(position[idx0 * 3], position[idx0 * 3 + 1], position[idx0 * 3 + 2]);
-                        const v1 = new THREE.Vector3(position[idx1 * 3], position[idx1 * 3 + 1], position[idx1 * 3 + 2]);
-                        const v2 = new THREE.Vector3(position[idx2 * 3], position[idx2 * 3 + 1], position[idx2 * 3 + 2]);
-                        const triCenter = new THREE.Vector3().add(v0).add(v1).add(v2).divideScalar(3);
-                        center.add(triCenter);
-                        const edge1 = new THREE.Vector3().subVectors(v1, v0);
-                        const edge2 = new THREE.Vector3().subVectors(v2, v0);
-                        const triNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-                        normalSum.add(triNormal);
-                    }
-                    center.divideScalar(triangles.length);
-                    normalSum.normalize();
-                    diceMesh.faceNormals.push(normalSum.clone());
-
+                // Add numbers to faces
+                const faces = parseInt(type.slice(1));
+                for (let faceIndex = 0; faceIndex < faces; faceIndex++) {
                     const number = faceIndex + 1;
                     const numberTexture = createNumberTexture(number);
                     const numberMaterial = new THREE.MeshBasicMaterial({ map: numberTexture, transparent: true });
                     const planeGeometry = new THREE.PlaneGeometry(0.3, 0.3);
                     const numberMesh = new THREE.Mesh(planeGeometry, numberMaterial);
+                    const position = geometry.attributes.position.array;
                     const offset = 0.01;
-                    numberMesh.position.copy(center).add(normalSum.multiplyScalar(offset));
-                    numberMesh.lookAt(center.clone().add(normalSum));
+                    numberMesh.position.set(
+                        position[faceIndex * 3] * (1 + offset),
+                        position[faceIndex * 3 + 1] * (1 + offset),
+                        position[faceIndex * 3 + 2] * (1 + offset)
+                    );
+                    numberMesh.lookAt(0, 0, 0);
                     diceMesh.add(numberMesh);
                 }
 
+                // Physics properties for rolling
                 diceMesh.rotationSpeed = new THREE.Vector3(
                     (Math.random() - 0.5) * 0.2,
                     (Math.random() - 0.5) * 0.2,
@@ -245,10 +211,11 @@
                 );
                 diceMesh.isRolling = false;
                 diceMesh.rollTime = 0;
+                diceMesh.type = type;
                 return diceMesh;
             }
 
-            // Add a die
+            // Add a die to the scene
             function addDie(type) {
                 if (diceCounts[type] < 10) {
                     diceCounts[type]++;
@@ -260,7 +227,7 @@
                 }
             }
 
-            // Remove a die
+            // Remove a die from the scene
             function removeDie(type) {
                 if (diceCounts[type] > 0) {
                     diceCounts[type]--;
@@ -274,7 +241,7 @@
                 }
             }
 
-            // Position dice
+            // Position dice in the scene
             function positionDice() {
                 const spacing = 2.5;
                 dice.forEach((die, index) => {
@@ -282,7 +249,7 @@
                 });
             }
 
-            // Update controls UI
+            // Update control displays
             function updateControls() {
                 diceTypes.forEach(type => {
                     const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
@@ -290,7 +257,7 @@
                 });
             }
 
-            // Add control listeners
+            // Add control button listeners
             document.querySelectorAll('.dice-control .add').forEach(button => {
                 button.addEventListener('click', () => {
                     const type = button.parentElement.dataset.type;
@@ -320,25 +287,23 @@
                     dice.forEach(die => {
                         die.isRolling = false;
                         const faces = parseInt(die.type.slice(1));
-                        die.rollResult = Math.floor(Math.random() * faces) + 1;
-                        const faceIndex = die.rollResult - 1;
-                        const desiredNormal = die.faceNormals[faceIndex];
-                        const up = new THREE.Vector3(0, 1, 0);
-                        const quaternion = new THREE.Quaternion().setFromUnitVectors(desiredNormal, up);
-                        die.quaternion.copy(quaternion);
+                        const roll = Math.floor(Math.random() * faces) + 1;
+                        die.rollResult = roll;
                     });
                     displayResults();
-                }, 2000);
+                }, 2000); // Roll for 2 seconds
             });
 
-            // Display results in log
+            // Display roll results and log
             function displayResults() {
                 const rollLog = document.getElementById('roll-log');
-                const results = dice.map((die, index) => `Dice ${index + 1} (${die.type}): ${die.rollResult}`).join(', ');
+                const results = dice.map(die => `${die.type}: ${die.rollResult}`).join(', ');
                 const total = dice.reduce((sum, die) => sum + die.rollResult, 0);
                 const logEntry = document.createElement('li');
-                logEntry.textContent = `Roll: ${results} | Total: ${total}`;
+                logEntry.textContent = `Rolls: ${results} | Total: ${total}`;
                 rollLog.insertBefore(logEntry, rollLog.firstChild);
+
+                // Keep only the last 8 rolls
                 while (rollLog.children.length > 8) {
                     rollLog.removeChild(rollLog.lastChild);
                 }
@@ -358,7 +323,7 @@
             }
             animate();
 
-            // Handle resize
+            // Handle window resize
             window.addEventListener('resize', () => {
                 camera.aspect = container.clientWidth / container.clientHeight;
                 camera.updateProjectionMatrix();
