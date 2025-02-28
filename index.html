@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D D&D Dice Roller</title>
+    <!-- Suppress favicon 404 error with a blank favicon -->
+    <link rel="icon" href="data:,">
     <style>
         body {
             margin: 0;
@@ -73,169 +75,194 @@
     <div id="canvas-container"></div>
     <button id="roll-button">Roll</button>
 
+    <!-- Load Three.js from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script>
-        // Scene Setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth * 0.8 / (window.innerHeight * 0.7), 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        const container = document.getElementById('canvas-container');
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
-
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0xffffff, 1);
-        pointLight.position.set(10, 10, 10);
-        scene.add(pointLight);
-
-        // Camera Position
-        camera.position.z = 5;
-
-        // Dice Management
-        let dice = [];
-        let diceCount = 2;
-
-        // Function to Create a Number Texture
-        function createNumberTexture(number) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'black';
-            ctx.font = 'bold 48px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(number.toString(), 32, 32);
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        // Function to Create a Die (d20 Only for This Example)
-        function createDie() {
-            const geometry = new THREE.IcosahedronGeometry(1);
-            const material = new THREE.MeshPhongMaterial({ color: 0xffff00 }); // Yellow dice
-            const diceMesh = new THREE.Mesh(geometry, material);
-
-            // Add numbers to each face
-            const faceCount = 20; // d20 has 20 faces
-            const tpf = 1; // 1 triangle per face for icosahedron
-            for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-                const number = faceIndex + 1;
-                let center = new THREE.Vector3(0, 0, 0);
-                let normalSum = new THREE.Vector3(0, 0, 0);
-                for (let j = 0; j < tpf; j++) {
-                    const i = faceIndex * tpf + j;
-                    const idx0 = geometry.index.array[i * 3];
-                    const idx1 = geometry.index.array[i * 3 + 1];
-                    const idx2 = geometry.index.array[i * 3 + 2];
-                    const v0 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx0 * 3);
-                    const v1 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx1 * 3);
-                    const v2 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx2 * 3);
-                    const triCenter = new THREE.Vector3().add(v0).add(v1).add(v2).divideScalar(3);
-                    center.add(triCenter);
-                    const edge1 = new THREE.Vector3().subVectors(v1, v0);
-                    const edge2 = new THREE.Vector3().subVectors(v2, v0);
-                    const triNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-                    normalSum.add(triNormal);
-                }
-                center.divideScalar(tpf);
-                normalSum.normalize();
-
-                // Create number plane
-                const numberTexture = createNumberTexture(number);
-                const numberMaterial = new THREE.MeshBasicMaterial({ map: numberTexture, transparent: true });
-                const planeGeometry = new THREE.PlaneGeometry(0.3, 0.3);
-                const numberMesh = new THREE.Mesh(planeGeometry, numberMaterial);
-                const offset = 0.01;
-                numberMesh.position.copy(center).add(normalSum.multiplyScalar(offset));
-                numberMesh.lookAt(center.clone().add(normalSum));
-                diceMesh.add(numberMesh);
-            }
-
-            // Add physics-like properties for rolling
-            diceMesh.rotationSpeed = new THREE.Vector3(
-                (Math.random() - 0.5) * 0.2,
-                (Math.random() - 0.5) * 0.2,
-                (Math.random() - 0.5) * 0.2
+        // Ensure code runs after all resources (including Three.js) are loaded
+        window.addEventListener('load', function() {
+            // Scene setup
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth * 0.8 / (window.innerHeight * 0.7),
+                0.1,
+                1000
             );
-            diceMesh.isRolling = false;
-            diceMesh.rollTime = 0;
-            return diceMesh;
-        }
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const container = document.getElementById('canvas-container');
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
 
-        // Initialize Dice
-        function initDice(count) {
-            dice.forEach(die => scene.remove(die));
-            dice = [];
-            for (let i = 0; i < count; i++) {
-                const die = createDie();
-                die.position.x = (i - (count - 1) / 2) * 2.5; // Space dice horizontally
-                scene.add(die);
-                dice.push(die);
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(10, 10, 10);
+            scene.add(pointLight);
+
+            // Camera position
+            camera.position.z = 5;
+
+            // Dice management
+            let dice = [];
+            let diceCount = 2;
+
+            // Function to create a number texture for dice faces
+            function createNumberTexture(number) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'black';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(number.toString(), 32, 32);
+                return new THREE.CanvasTexture(canvas);
             }
-            document.getElementById('dice-count').textContent = count;
-        }
-        initDice(diceCount);
 
-        // Control Buttons
-        document.getElementById('add-die').addEventListener('click', () => {
-            if (diceCount < 10) { // Arbitrary max limit
-                diceCount++;
-                initDice(diceCount);
-            }
-        });
+            // Function to create a d20 die
+            function createDie() {
+                const geometry = new THREE.IcosahedronGeometry(1);
+                if (!geometry.index) {
+                    console.error('IcosahedronGeometry index is null. Three.js may not have loaded correctly.');
+                    return null;
+                }
+                const material = new THREE.MeshPhongMaterial({ color: 0xffff00 }); // Yellow dice
+                const diceMesh = new THREE.Mesh(geometry, material);
 
-        document.getElementById('remove-die').addEventListener('click', () => {
-            if (diceCount > 1) {
-                diceCount--;
-                initDice(diceCount);
-            }
-        });
+                // Add numbers to each face (d20 has 20 faces)
+                const faceCount = 20;
+                const tpf = 1; // Triangles per face (1 for icosahedron)
+                for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
+                    const number = faceIndex + 1;
+                    let center = new THREE.Vector3(0, 0, 0);
+                    let normalSum = new THREE.Vector3(0, 0, 0);
+                    for (let j = 0; j < tpf; j++) {
+                        const i = faceIndex * tpf + j;
+                        const idx0 = geometry.index.array[i * 3];
+                        const idx1 = geometry.index.array[i * 3 + 1];
+                        const idx2 = geometry.index.array[i * 3 + 2];
+                        const v0 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx0 * 3);
+                        const v1 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx1 * 3);
+                        const v2 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx2 * 3);
+                        const triCenter = new THREE.Vector3().add(v0).add(v1).add(v2).divideScalar(3);
+                        center.add(triCenter);
+                        const edge1 = new THREE.Vector3().subVectors(v1, v0);
+                        const edge2 = new THREE.Vector3().subVectors(v2, v0);
+                        const triNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                        normalSum.add(triNormal);
+                    }
+                    center.divideScalar(tpf);
+                    normalSum.normalize();
 
-        document.getElementById('roll-button').addEventListener('click', () => {
-            dice.forEach(die => {
-                die.isRolling = true;
-                die.rollTime = 0;
-                die.rotationSpeed.set(
+                    // Create number plane
+                    const numberTexture = createNumberTexture(number);
+                    const numberMaterial = new THREE.MeshBasicMaterial({
+                        map: numberTexture,
+                        transparent: true
+                    });
+                    const planeGeometry = new THREE.PlaneGeometry(0.3, 0.3);
+                    const numberMesh = new THREE.Mesh(planeGeometry, numberMaterial);
+                    const offset = 0.01;
+                    numberMesh.position.copy(center).add(normalSum.multiplyScalar(offset));
+                    numberMesh.lookAt(center.clone().add(normalSum));
+                    diceMesh.add(numberMesh);
+                }
+
+                // Add physics-like properties for rolling
+                diceMesh.rotationSpeed = new THREE.Vector3(
                     (Math.random() - 0.5) * 0.2,
                     (Math.random() - 0.5) * 0.2,
                     (Math.random() - 0.5) * 0.2
                 );
-            });
-        });
+                diceMesh.isRolling = false;
+                diceMesh.rollTime = 0;
+                return diceMesh;
+            }
 
-        // Animation Loop
-        function animate() {
-            requestAnimationFrame(animate);
-
-            dice.forEach(die => {
-                if (die.isRolling) {
-                    die.rotation.x += die.rotationSpeed.x;
-                    die.rotation.y += die.rotationSpeed.y;
-                    die.rotation.z += die.rotationSpeed.z;
-                    die.rollTime += 0.05;
-                    if (die.rollTime > 2) { // Roll for ~2 seconds
-                        die.isRolling = false;
-                        // Snap to a random face (simplified)
-                        die.rotation.set(
-                            Math.floor(Math.random() * 4) * Math.PI / 2,
-                            Math.floor(Math.random() * 4) * Math.PI / 2,
-                            Math.floor(Math.random() * 4) * Math.PI / 2
-                        );
+            // Initialize dice
+            function initDice(count) {
+                dice.forEach(die => scene.remove(die));
+                dice = [];
+                for (let i = 0; i < count; i++) {
+                    const die = createDie();
+                    if (die) {
+                        die.position.x = (i - (count - 1) / 2) * 2.5; // Space dice horizontally
+                        scene.add(die);
+                        dice.push(die);
+                    } else {
+                        console.error(`Failed to create die ${i + 1}`);
                     }
+                }
+                document.getElementById('dice-count').textContent = count;
+            }
+            initDice(diceCount);
+
+            // Control buttons
+            document.getElementById('add-die').addEventListener('click', () => {
+                if (diceCount < 10) { // Arbitrary max limit
+                    diceCount++;
+                    initDice(diceCount);
                 }
             });
 
-            renderer.render(scene, camera);
-        }
-        animate();
+            document.getElementById('remove-die').addEventListener('click', () => {
+                if (diceCount > 1) {
+                    diceCount--;
+                    initDice(diceCount);
+                }
+            });
 
-        // Resize Handler
-        window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            document.getElementById('roll-button').addEventListener('click', () => {
+                dice.forEach(die => {
+                    die.isRolling = true;
+                    die.rollTime = 0;
+                    die.rotationSpeed.set(
+                        (Math.random() - 0.5) * 0.2,
+                        (Math.random() - 0.5) * 0.2,
+                        (Math.random() - 0.5) * 0.2
+                    );
+                });
+            });
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                dice.forEach(die => {
+                    if (die.isRolling) {
+                        die.rotation.x += die.rotationSpeed.x;
+                        die.rotation.y += die.rotationSpeed.y;
+                        die.rotation.z += die.rotationSpeed.z;
+                        die.rollTime += 0.05;
+                        if (die.rollTime > 2) { // Roll for ~2 seconds
+                            die.isRolling = false;
+                            // Snap to a random orientation (simplified)
+                            die.rotation.set(
+                                Math.floor(Math.random() * 4) * Math.PI / 2,
+                                Math.floor(Math.random() * 4) * Math.PI / 2,
+                                Math.floor(Math.random() * 4) * Math.PI / 2
+                            );
+                        }
+                    }
+                });
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            // Verify Three.js loaded
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js is not loaded. Please check the script source or network connection.');
+            }
         });
     </script>
 </body>
