@@ -1,264 +1,242 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>D&D Dice Roller</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D D&D Dice Roller</title>
     <style>
         body {
-            font-family: 'Cinzel', serif;
-            background: linear-gradient(to bottom, #2F1B0D, #5C4033); /* Dark wood gradient */
-            color: #FFD700; /* Gold text */
-            text-align: center;
             margin: 0;
-            padding: 20px;
-        }
-        #main-container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: rgba(0, 0, 0, 0.7); /* Semi-transparent black for contrast */
-            padding: 20px;
-            border: 3px solid #FFD700;
-            border-radius: 10px;
-        }
-        h1 {
-            font-size: 36px;
-            text-shadow: 0 0 10px #FFD700;
-        }
-        #dice-selection {
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .die-selection {
-            display: flex;
+            flex-direction: column;
             align-items: center;
-            background: #8B0000; /* Dark red */
-            padding: 5px;
-            border-radius: 5px;
-            border: 1px solid #FFD700;
+            height: 100vh;
+            overflow: hidden;
         }
-        .die-selection span {
-            margin: 0 10px;
-            font-size: 18px;
-        }
-        button {
-            background-color: #8B0000;
-            color: #FFD700;
-            border: 2px solid #FFD700;
-            padding: 5px 10px;
-            font-family: 'Cinzel', serif;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 5px;
-            box-shadow: 0 0 5px #FFD700;
-            transition: all 0.3s;
-        }
-        button:hover {
-            background-color: #A52A2A;
-            box-shadow: 0 0 10px #FFD700;
-        }
-        #dice-canvas {
-            height: 400px;
-            background: #1A0F0A; /* Dark background for canvas */
-            border: 2px solid #FFD700;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        #roll-button {
-            padding: 10px 30px;
-            font-size: 20px;
-        }
-        #results {
-            font-size: 18px;
-            background: rgba(0, 0, 0, 0.5);
+        #controls {
+            margin: 20px 0;
+            background-color: #ff4444;
             padding: 10px;
             border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 200px;
         }
-        #results ul {
-            list-style: none;
-            padding: 0;
+        #controls span {
+            margin: 0 10px;
+            color: yellow;
+            font-weight: bold;
+        }
+        #controls button {
+            background-color: yellow;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+        #controls button:hover {
+            background-color: #e6e600;
+        }
+        #canvas-container {
+            width: 80%;
+            height: 70%;
+            border: 2px solid yellow;
+            background-color: #000;
+            position: relative;
+        }
+        #roll-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4444ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #roll-button:hover {
+            background-color: #3333cc;
         }
     </style>
 </head>
 <body>
-    <div id="main-container">
-        <h1>D&D Dice Roller</h1>
-        <div id="dice-selection">
-            <div class="die-selection">
-                <span>d4</span>
-                <button class="minus" data-type="d4">-</button>
-                <span class="count" data-type="d4">0</span>
-                <button class="plus" data-type="d4">+</button>
-            </div>
-            <div class="die-selection">
-                <span>d6</span>
-                <button class="minus" data-type="d6">-</button>
-                <span class="count" data-type="d6">0</span>
-                <button class="plus" data-type="d6">+</button>
-            </div>
-            <div class="die-selection">
-                <span>d8</span>
-                <button class="minus" data-type="d8">-</button>
-                <span class="count" data-type="d8">0</span>
-                <button class="plus" data-type="d8">+</button>
-            </div>
-            <div class="die-selection">
-                <span>d10</span>
-                <button class="minus" data-type="d10">-</button>
-                <span class="count" data-type="d10">0</span>
-                <button class="plus" data-type="d10">+</button>
-            </div>
-            <div class="die-selection">
-                <span>d12</span>
-                <button class="minus" data-type="d12">-</button>
-                <span class="count" data-type="d12">0</span>
-                <button class="plus" data-type="d12">+</button>
-            </div>
-            <div class="die-selection">
-                <span>d20</span>
-                <button class="minus" data-type="d20">-</button>
-                <span class="count" data-type="d20">0</span>
-                <button class="plus" data-type="d20">+</button>
-            </div>
-        </div>
-        <div id="dice-canvas"></div>
-        <button id="roll-button">Roll</button>
-        <div id="results"></div>
+    <div id="controls">
+        <button id="remove-die">-</button>
+        <span>D20: <span id="dice-count">2</span></span>
+        <button id="add-die">+</button>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script>
-        // Three.js setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 10;
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth * 0.8, 400);
-        document.getElementById('dice-canvas').appendChild(renderer.domElement);
+    <div id="canvas-container"></div>
+    <button id="roll-button">Roll</button>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script>
+        // Scene Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth * 0.8 / (window.innerHeight * 0.7), 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const container = document.getElementById('canvas-container');
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 10, 5);
-        scene.add(directionalLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
 
-        // Dice management
-        const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
-        const selectedDice = [];
-        let isRolling = false;
+        // Camera Position
+        camera.position.z = 5;
 
-        function createDie(type) {
-            let geometry;
-            switch (type) {
-                case 'd4': geometry = new THREE.TetrahedronGeometry(1); break;
-                case 'd6': geometry = new THREE.BoxGeometry(1, 1, 1); break;
-                case 'd8': geometry = new THREE.OctahedronGeometry(1); break;
-                case 'd10': geometry = new THREE.DodecahedronGeometry(1); break; // Approximation
-                case 'd12': geometry = new THREE.DodecahedronGeometry(1); break;
-                case 'd20': geometry = new THREE.IcosahedronGeometry(1); break;
-            }
-            const material = new THREE.MeshPhongMaterial({
-                color: getColorForType(type),
-                shininess: 100,
-                specular: 0x555555
-            });
-            const mesh = new THREE.Mesh(geometry, material);
-            return mesh;
+        // Dice Management
+        let dice = [];
+        let diceCount = 2;
+
+        // Function to Create a Number Texture
+        function createNumberTexture(number) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(number.toString(), 32, 32);
+            return new THREE.CanvasTexture(canvas);
         }
 
-        function getColorForType(type) {
-            switch (type) {
-                case 'd4': return 0xFF00FF; // Magenta
-                case 'd6': return 0x00CED1; // Teal
-                case 'd8': return 0x32CD32; // Lime green
-                case 'd10': return 0xFF4500; // Orange-red
-                case 'd12': return 0xFFA500; // Orange
-                case 'd20': return 0xFFD700; // Gold
-            }
-        }
+        // Function to Create a Die (d20 Only for This Example)
+        function createDie() {
+            const geometry = new THREE.IcosahedronGeometry(1);
+            const material = new THREE.MeshPhongMaterial({ color: 0xffff00 }); // Yellow dice
+            const diceMesh = new THREE.Mesh(geometry, material);
 
-        function addDie(type) {
-            diceCounts[type]++;
-            const die = { type, faces: parseInt(type.slice(1)), mesh: createDie(type) };
-            selectedDice.push(die);
-            scene.add(die.mesh);
-            positionDice();
-            updateCountDisplay(type);
-        }
-
-        function removeDie(type) {
-            if (diceCounts[type] > 0) {
-                diceCounts[type]--;
-                const index = selectedDice.findIndex(d => d.type === type);
-                if (index !== -1) {
-                    scene.remove(selectedDice[index].mesh);
-                    selectedDice.splice(index, 1);
+            // Add numbers to each face
+            const faceCount = 20; // d20 has 20 faces
+            const tpf = 1; // 1 triangle per face for icosahedron
+            for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
+                const number = faceIndex + 1;
+                let center = new THREE.Vector3(0, 0, 0);
+                let normalSum = new THREE.Vector3(0, 0, 0);
+                for (let j = 0; j < tpf; j++) {
+                    const i = faceIndex * tpf + j;
+                    const idx0 = geometry.index.array[i * 3];
+                    const idx1 = geometry.index.array[i * 3 + 1];
+                    const idx2 = geometry.index.array[i * 3 + 2];
+                    const v0 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx0 * 3);
+                    const v1 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx1 * 3);
+                    const v2 = new THREE.Vector3().fromArray(geometry.attributes.position.array, idx2 * 3);
+                    const triCenter = new THREE.Vector3().add(v0).add(v1).add(v2).divideScalar(3);
+                    center.add(triCenter);
+                    const edge1 = new THREE.Vector3().subVectors(v1, v0);
+                    const edge2 = new THREE.Vector3().subVectors(v2, v0);
+                    const triNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                    normalSum.add(triNormal);
                 }
-                positionDice();
-                updateCountDisplay(type);
+                center.divideScalar(tpf);
+                normalSum.normalize();
+
+                // Create number plane
+                const numberTexture = createNumberTexture(number);
+                const numberMaterial = new THREE.MeshBasicMaterial({ map: numberTexture, transparent: true });
+                const planeGeometry = new THREE.PlaneGeometry(0.3, 0.3);
+                const numberMesh = new THREE.Mesh(planeGeometry, numberMaterial);
+                const offset = 0.01;
+                numberMesh.position.copy(center).add(normalSum.multiplyScalar(offset));
+                numberMesh.lookAt(center.clone().add(normalSum));
+                diceMesh.add(numberMesh);
             }
+
+            // Add physics-like properties for rolling
+            diceMesh.rotationSpeed = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2
+            );
+            diceMesh.isRolling = false;
+            diceMesh.rollTime = 0;
+            return diceMesh;
         }
 
-        function updateCountDisplay(type) {
-            document.querySelector(`.count[data-type="${type}"]`).textContent = diceCounts[type];
+        // Initialize Dice
+        function initDice(count) {
+            dice.forEach(die => scene.remove(die));
+            dice = [];
+            for (let i = 0; i < count; i++) {
+                const die = createDie();
+                die.position.x = (i - (count - 1) / 2) * 2.5; // Space dice horizontally
+                scene.add(die);
+                dice.push(die);
+            }
+            document.getElementById('dice-count').textContent = count;
         }
+        initDice(diceCount);
 
-        function positionDice() {
-            const spacing = 2.5;
-            const startX = - (selectedDice.length - 1) * spacing / 2;
-            selectedDice.forEach((die, index) => {
-                die.mesh.position.set(startX + index * spacing, 0, 0);
-            });
-            // Adjust camera if many dice
-            camera.position.z = Math.max(10, selectedDice.length * 2);
-        }
-
-        // Event listeners for dice selection
-        document.querySelectorAll('.plus').forEach(button => {
-            button.addEventListener('click', () => addDie(button.dataset.type));
+        // Control Buttons
+        document.getElementById('add-die').addEventListener('click', () => {
+            if (diceCount < 10) { // Arbitrary max limit
+                diceCount++;
+                initDice(diceCount);
+            }
         });
-        document.querySelectorAll('.minus').forEach(button => {
-            button.addEventListener('click', () => removeDie(button.dataset.type));
+
+        document.getElementById('remove-die').addEventListener('click', () => {
+            if (diceCount > 1) {
+                diceCount--;
+                initDice(diceCount);
+            }
         });
 
-        // Roll button logic
         document.getElementById('roll-button').addEventListener('click', () => {
-            if (selectedDice.length === 0) return;
-            isRolling = true;
-            selectedDice.forEach(die => {
-                die.rotationSpeedX = (Math.random() - 0.5) * 0.1;
-                die.rotationSpeedY = (Math.random() - 0.5) * 0.1;
-                die.rotationSpeedZ = (Math.random() - 0.5) * 0.1;
+            dice.forEach(die => {
+                die.isRolling = true;
+                die.rollTime = 0;
+                die.rotationSpeed.set(
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() - 0.5) * 0.2
+                );
             });
-            const results = selectedDice.map(die => ({
-                type: die.type,
-                roll: Math.floor(Math.random() * die.faces) + 1
-            }));
-            const total = results.reduce((sum, r) => sum + r.roll, 0);
-            setTimeout(() => {
-                isRolling = false;
-                selectedDice.forEach(die => {
-                    die.rotationSpeedX = die.rotationSpeedY = die.rotationSpeedZ = 0;
-                });
-                const resultsHtml = results.map(r => `<li>${r.type}: ${r.roll}</li>`).join('');
-                document.getElementById('results').innerHTML = `<p>Rolls:</p><ul>${resultsHtml}</ul><p>Total: ${total}</p>`;
-            }, 2000); // 2-second roll animation
         });
 
-        // Animation loop
+        // Animation Loop
         function animate() {
             requestAnimationFrame(animate);
-            if (isRolling) {
-                selectedDice.forEach(die => {
-                    die.mesh.rotation.x += die.rotationSpeedX;
-                    die.mesh.rotation.y += die.rotationSpeedY;
-                    die.mesh.rotation.z += die.rotationSpeedZ;
-                });
-            }
+
+            dice.forEach(die => {
+                if (die.isRolling) {
+                    die.rotation.x += die.rotationSpeed.x;
+                    die.rotation.y += die.rotationSpeed.y;
+                    die.rotation.z += die.rotationSpeed.z;
+                    die.rollTime += 0.05;
+                    if (die.rollTime > 2) { // Roll for ~2 seconds
+                        die.isRolling = false;
+                        // Snap to a random face (simplified)
+                        die.rotation.set(
+                            Math.floor(Math.random() * 4) * Math.PI / 2,
+                            Math.floor(Math.random() * 4) * Math.PI / 2,
+                            Math.floor(Math.random() * 4) * Math.PI / 2
+                        );
+                    }
+                }
+            });
+
             renderer.render(scene, camera);
         }
         animate();
+
+        // Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
     </script>
 </body>
 </html>
