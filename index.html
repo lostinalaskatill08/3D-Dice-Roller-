@@ -205,29 +205,36 @@
             pointLight2.position.set(-10, -5, 8);
             scene.add(pointLight2);
 
-            // Camera position
-            camera.position.z = 10;
+            // Camera position - closer to see dice better
+            camera.position.z = 7;
+            camera.position.y = 2;
 
-            // Add a subtle table surface
+            // Add a more visible table surface
             const tableGeometry = new THREE.PlaneGeometry(20, 20);
             const tableMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x222222, 
-                roughness: 0.3,
-                metalness: 0.2
+                color: 0x333333, 
+                roughness: 0.5,
+                metalness: 0.1
             });
             const table = new THREE.Mesh(tableGeometry, tableMaterial);
             table.rotation.x = -Math.PI / 2;
-            table.position.y = -2;
+            table.position.y = 0; // Higher position to match the new physics
+            
+            // Add grid lines to the table
+            const gridHelper = new THREE.GridHelper(20, 20, 0x666666, 0x444444);
+            gridHelper.position.y = 0.01; // Slightly above table to avoid z-fighting
+            
             scene.add(table);
+            scene.add(gridHelper);
 
-            // Dice colors
+            // Brighter dice colors
             const diceColors = {
-                d4: 0xff4444,   // Red
-                d6: 0x44ff44,   // Green
-                d8: 0x4444ff,   // Blue
-                d10: 0xff44ff,  // Purple
-                d12: 0xffff44,  // Yellow
-                d20: 0x44ffff   // Cyan
+                d4: 0xff5555,   // Bright Red
+                d6: 0x55ff55,   // Bright Green
+                d8: 0x5555ff,   // Bright Blue
+                d10: 0xff55ff,  // Bright Purple
+                d12: 0xffff55,  // Bright Yellow
+                d20: 0x55ffff   // Bright Cyan
             };
 
             // Dice management
@@ -326,100 +333,34 @@
                 return new THREE.CanvasTexture(canvas);
             }
 
-            // Create a die with numbered faces and glossy appearance
+            // Create a die with solid colors and glossy appearance (no numbers)
             function createDie(type) {
                 const geometry = geometries[type];
                 const diceColor = diceColors[type];
                 
-                // Create glossy material
+                // Create more vibrant glossy material
                 const material = new THREE.MeshStandardMaterial({ 
                     color: diceColor,
-                    metalness: 0.3,
-                    roughness: 0.2,
-                    envMapIntensity: 1.0,
+                    metalness: 0.5,
+                    roughness: 0.1,
+                    envMapIntensity: 1.5,
                     flatShading: false
                 });
                 
+                // Add edge highlighting with a second material
+                const edges = new THREE.EdgesGeometry(geometry);
+                const edgeMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xffffff,
+                    linewidth: 1
+                });
+                const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+                
+                // Create the main die
                 const die = new THREE.Mesh(geometry, material);
+                die.add(wireframe);
                 
-                // Add number textures to faces based on dice type
+                // Get number of faces from dice type
                 const faces = parseInt(type.slice(1));
-                
-                // Position of the numbers depends on the dice type
-                let numberPositions;
-                
-                if (type === 'd4') {
-                    // Tetrahedron - place numbers at vertices
-                    numberPositions = [
-                        new THREE.Vector3(1, 1, 1).normalize(),
-                        new THREE.Vector3(-1, -1, 1).normalize(),
-                        new THREE.Vector3(-1, 1, -1).normalize(),
-                        new THREE.Vector3(1, -1, -1).normalize()
-                    ];
-                } else if (type === 'd6') {
-                    // Cube - place numbers at face centers
-                    numberPositions = [
-                        new THREE.Vector3(0, 1, 0),  // top
-                        new THREE.Vector3(1, 0, 0),  // right
-                        new THREE.Vector3(0, 0, 1),  // front
-                        new THREE.Vector3(-1, 0, 0), // left
-                        new THREE.Vector3(0, 0, -1), // back
-                        new THREE.Vector3(0, -1, 0)  // bottom
-                    ];
-                } else {
-                    // For other dice, use vertex positions from geometry
-                    const positionArray = geometry.attributes.position.array;
-                    numberPositions = [];
-                    
-                    // Extract unique face centers (approximate for complex geometries)
-                    const usedPositions = new Set();
-                    
-                    for (let i = 0; i < Math.min(faces, positionArray.length / 3); i++) {
-                        const x = positionArray[i * 3];
-                        const y = positionArray[i * 3 + 1];
-                        const z = positionArray[i * 3 + 2];
-                        
-                        // Create a normalized vector for the position
-                        const posKey = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`;
-                        
-                        if (!usedPositions.has(posKey) && numberPositions.length < faces) {
-                            usedPositions.add(posKey);
-                            numberPositions.push(new THREE.Vector3(x, y, z).normalize());
-                        }
-                    }
-                }
-                
-                // Create number textures on small planes
-                for (let i = 0; i < Math.min(faces, numberPositions.length); i++) {
-                    const number = i + 1;
-                    const hexColor = '#' + diceColor.toString(16).padStart(6, '0');
-                    const numberTexture = createNumberTexture(number, hexColor);
-                    const numberMaterial = new THREE.MeshBasicMaterial({ 
-                        map: numberTexture, 
-                        transparent: true,
-                        depthWrite: false,
-                        side: THREE.DoubleSide
-                    });
-                    
-                    // Create a small plane for the number
-                    const planeSize = type === 'd4' ? 0.4 : 0.5;
-                    const planeGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
-                    const numberPlane = new THREE.Mesh(planeGeometry, numberMaterial);
-                    
-                    // Position the number plane
-                    const position = numberPositions[i];
-                    const offsetDistance = type === 'd4' ? 0.6 : 0.52;
-                    numberPlane.position.set(
-                        position.x * offsetDistance,
-                        position.y * offsetDistance, 
-                        position.z * offsetDistance
-                    );
-                    
-                    // Orient the plane to face outward
-                    numberPlane.lookAt(position.x * 2, position.y * 2, position.z * 2);
-                    
-                    die.add(numberPlane);
-                }
 
                 // Store physics properties
                 die.userData = {
@@ -460,17 +401,15 @@
                 }
             }
 
-            // Position dice in the scene
+            // Position dice in the scene - closer spacing and better initial position
             function positionDice() {
                 const totalDice = dice.length;
                 if (totalDice === 0) return;
                 
-                let arranged = false;
-                
-                // Try to arrange in a grid
+                // Arrange in a more compact grid
                 if (totalDice <= 25) {
                     const gridSize = Math.ceil(Math.sqrt(totalDice));
-                    const spacing = 2.2;
+                    const spacing = 1.8; // Closer spacing
                     const offset = (gridSize - 1) * spacing / 2;
                     
                     dice.forEach((die, index) => {
@@ -478,7 +417,7 @@
                         const col = index % gridSize;
                         die.position.set(
                             col * spacing - offset,
-                            0,
+                            0.5, // Slightly elevated for better visibility
                             row * spacing - offset
                         );
                         
@@ -488,15 +427,21 @@
                             Math.random() * Math.PI * 2,
                             Math.random() * Math.PI * 2
                         );
+                        
+                        // Add slight scale variation for visual interest
+                        const scale = 0.85 + Math.random() * 0.3;
+                        die.scale.set(scale, scale, scale);
                     });
-                    arranged = true;
-                }
-                
-                // Fallback to linear arrangement
-                if (!arranged) {
-                    const spacing = 2.5;
+                } else {
+                    // Fallback to circular arrangement for many dice
+                    const radius = Math.min(totalDice * 0.3, 4);
                     dice.forEach((die, index) => {
-                        die.position.set((index - dice.length / 2) * spacing, 0, 0);
+                        const angle = (index / totalDice) * Math.PI * 2;
+                        die.position.set(
+                            Math.cos(angle) * radius,
+                            0.5,
+                            Math.sin(angle) * radius
+                        );
                     });
                 }
             }
@@ -534,7 +479,7 @@
                 }
             }
 
-            // Add fancy roll animation with physics
+            // Improved roll animation with better physics
             function rollDice() {
                 if (dice.length === 0) return;
                 
@@ -549,31 +494,34 @@
                     return result;
                 });
                 
-                // Set initial physics for roll animation
+                // Set initial physics for roll animation - more natural and visible
                 dice.forEach(die => {
                     die.userData.isRolling = true;
                     die.userData.rollTime = 0;
                     
-                    // Random initial velocity (more dramatic)
+                    // More energetic initial velocity
                     die.userData.rollingSpeed = new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.2,
-                        Math.random() * 0.1 + 0.05,
-                        (Math.random() - 0.5) * 0.2
+                        (Math.random() - 0.5) * 0.8, // More horizontal movement
+                        Math.random() * 0.3 + 0.3,   // Higher initial toss
+                        (Math.random() - 0.5) * 0.8  // More horizontal movement
                     );
                     
-                    // Random angular velocity for spinning
+                    // More energetic angular velocity
                     die.userData.angularVelocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.4,
-                        (Math.random() - 0.5) * 0.4,
-                        (Math.random() - 0.5) * 0.4
+                        (Math.random() - 0.5) * 1.2, // Faster rotation
+                        (Math.random() - 0.5) * 1.2,
+                        (Math.random() - 0.5) * 1.2
                     );
                     
-                    // Lift the die slightly for the roll
-                    die.position.y = 1 + Math.random() * 2;
+                    // Higher initial position for better visibility
+                    die.position.y = 2 + Math.random() * 1.5;
+                    
+                    // Reset scale to normal
+                    die.scale.set(1, 1, 1);
                 });
                 
-                // Roll duration
-                const rollDuration = 1500; // milliseconds
+                // Roll duration - slightly longer for better animation
+                const rollDuration = 1800; // milliseconds
                 
                 // After animation completes, set the final orientation for the result
                 setTimeout(() => {
@@ -581,6 +529,9 @@
                         const result = die.userData.rollResult;
                         setDieOrientation(die, result);
                         die.userData.isRolling = false;
+                        
+                        // Make the final position on the table
+                        die.position.y = 0.5;
                     });
                     
                     displayResults();
@@ -631,11 +582,11 @@
                 }
             }
 
-            // Physics update for rolling dice
+            // Simplified and improved physics update for rolling dice
             function updateDicePhysics(delta) {
                 const gravity = new THREE.Vector3(0, -9.8, 0);
-                const airResistance = 0.98;
-                const tableY = -1.8; // Height of the table surface
+                const airResistance = 0.97; // Slightly higher air resistance
+                const tableY = 0; // Height of the table surface - higher for better visibility
                 
                 dice.forEach(die => {
                     if (die.userData.isRolling) {
@@ -654,32 +605,37 @@
                         die.userData.rollingSpeed.multiplyScalar(airResistance);
                         die.userData.angularVelocity.multiplyScalar(airResistance);
                         
-                        // Handle collision with table
+                        // Handle collision with table - more energetic bounces
                         if (die.position.y - 0.5 < tableY) {
                             die.position.y = tableY + 0.5;
                             
-                            // Bounce with reduced energy
-                            die.userData.rollingSpeed.y = Math.abs(die.userData.rollingSpeed.y) * 0.6;
+                            // More energetic bounce
+                            die.userData.rollingSpeed.y = Math.abs(die.userData.rollingSpeed.y) * 0.7;
                             
-                            // Transfer some vertical momentum to rotation
-                            const bounceRotation = Math.random() * 0.2 + 0.1;
+                            // Add a minimum bounce height for visual interest
+                            if (die.userData.rollingSpeed.y < 0.4 && die.userData.rollingSpeed.y > 0.05) {
+                                die.userData.rollingSpeed.y = 0.4;
+                            }
+                            
+                            // More visible rotation on bounce
+                            const bounceRotation = Math.random() * 0.6 + 0.3;
                             die.userData.angularVelocity.x += (Math.random() - 0.5) * bounceRotation;
                             die.userData.angularVelocity.z += (Math.random() - 0.5) * bounceRotation;
                             
-                            // Friction with table slows horizontal motion
-                            die.userData.rollingSpeed.x *= 0.8;
-                            die.userData.rollingSpeed.z *= 0.8;
+                            // Less friction with table for longer rolls
+                            die.userData.rollingSpeed.x *= 0.9;
+                            die.userData.rollingSpeed.z *= 0.9;
                         }
                         
-                        // Boundary checks to keep dice from going off-screen
-                        const boundary = 8;
+                        // Tighter boundary checks to keep dice visible
+                        const boundary = 5;
                         if (Math.abs(die.position.x) > boundary) {
                             die.position.x = Math.sign(die.position.x) * boundary;
-                            die.userData.rollingSpeed.x *= -0.6; // Bounce off wall
+                            die.userData.rollingSpeed.x *= -0.8; // More elastic wall bounce
                         }
                         if (Math.abs(die.position.z) > boundary) {
                             die.position.z = Math.sign(die.position.z) * boundary;
-                            die.userData.rollingSpeed.z *= -0.6; // Bounce off wall
+                            die.userData.rollingSpeed.z *= -0.8; // More elastic wall bounce
                         }
                     }
                 });
@@ -732,10 +688,13 @@
                 renderer.setSize(container.clientWidth, container.clientHeight);
             });
             
-            // Add some ambient dice for initial display
-            addDie('d20');
-            addDie('d12');
+            // Add a variety of dice for initial display
+            addDie('d4');
             addDie('d6');
+            addDie('d8');
+            addDie('d10');
+            addDie('d12');
+            addDie('d20');
         });
     </script>
 </body>
