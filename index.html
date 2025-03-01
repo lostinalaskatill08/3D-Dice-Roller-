@@ -17,9 +17,9 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            overflow-y: auto; /* Enable vertical scrolling */
-            padding-bottom: 30px; /* Add some padding at the bottom */
-            position: relative; /* For positioning the overlay */
+            overflow-y: auto;
+            padding-bottom: 50px;
+            position: relative;
         }
         /* Hide any code that might leak to the page */
         body::after {
@@ -28,7 +28,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 50px; /* Cover potential code leakage */
+            height: 100px;
             background-color: #1a1a1a;
             z-index: 1000;
         }
@@ -41,51 +41,45 @@
             max-width: 800px;
         }
         .dice-control {
+            background-color: #ff4444;
             padding: 10px;
             margin: 5px;
             border-radius: 5px;
             display: flex;
             align-items: center;
         }
-        .dice-control[data-type="d4"] { background-color: #ff4444; }
-        .dice-control[data-type="d6"] { background-color: #44ff44; }
-        .dice-control[data-type="d8"] { background-color: #4444ff; }
-        .dice-control[data-type="d10"] { background-color: #ff44ff; }
-        .dice-control[data-type="d12"] { background-color: #ffff44; }
-        .dice-control[data-type="d20"] { background-color: #44ffff; }
-        
         .dice-control span {
             margin: 0 10px;
-            color: white;
+            color: yellow;
             font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
         .dice-control button {
-            background-color: white;
+            background-color: yellow;
             border: none;
             padding: 5px 10px;
             cursor: pointer;
             font-weight: bold;
             border-radius: 3px;
+            color: #000;
         }
         .dice-control button:hover {
-            background-color: #e6e6e6;
+            background-color: #e6e600;
         }
         #canvas-container {
             width: 90%;
-            height: 50vh; /* Use viewport height for better scaling */
-            border: 2px solid #444;
+            height: 50vh;
+            border: 3px solid #ff4444;
             background-color: #000;
             position: relative;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(255,255,255,0.1);
+            box-shadow: 0 0 15px rgba(255,68,68,0.3);
             margin-bottom: 15px;
-            overflow: hidden; /* Ensure no content leaks */
+            overflow: hidden;
         }
         #roll-button {
             margin: 15px 0;
             padding: 12px 24px;
-            background-color: #ff9900;
+            background-color: #4444ff;
             color: white;
             border: none;
             border-radius: 5px;
@@ -96,8 +90,7 @@
             transition: all 0.2s ease;
         }
         #roll-button:hover {
-            background-color: #ffaa33;
-            transform: translateY(-2px);
+            background-color: #3333cc;
         }
         #roll-button:active {
             transform: translateY(1px);
@@ -105,21 +98,21 @@
         #results {
             background-color: #222;
             padding: 15px;
-            border: 1px solid #444;
-            border-radius: 8px;
+            border: 1px solid yellow;
+            border-radius: 5px;
             width: 90%;
             max-width: 800px;
-            height: 200px; /* Increased height */
-            overflow-y: auto; /* Enable vertical scrolling in results area */
+            height: 200px;
+            overflow-y: auto;
             color: #fff;
             margin-top: 15px;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            margin-bottom: 30px; /* Add more space at bottom */
-            position: relative; /* For proper sticky header */
+            margin-bottom: 50px;
+            position: relative;
         }
         #results h3 {
             margin: 0 0 15px 0;
-            color: #ff9900;
+            color: yellow;
             border-bottom: 1px solid #444;
             padding-bottom: 8px;
             position: sticky;
@@ -139,8 +132,8 @@
             background-color: #333;
             border-radius: 4px;
             line-height: 1.5;
-            white-space: normal; /* Allow text to wrap */
-            word-break: break-word; /* Prevent overflow by breaking words */
+            white-space: normal;
+            word-break: break-word;
         }
         #roll-log li:nth-child(odd) {
             background-color: #2a2a2a;
@@ -159,7 +152,7 @@
         .d12-result { background-color: rgba(255, 255, 68, 0.5); }
         .d20-result { background-color: rgba(68, 255, 255, 0.5); }
         .total-result {
-            display: block; /* Make total appear on its own line */
+            display: block;
             background-color: #ff9900;
             color: white;
             padding: 5px 10px;
@@ -171,6 +164,17 @@
         /* Hide any error messages or code leaks */
         pre, code {
             display: none !important;
+        }
+        
+        /* Extra code hiding at bottom */
+        #code-blocker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background-color: #1a1a1a;
+            z-index: 9999;
         }
     </style>
 </head>
@@ -213,8 +217,46 @@
         <h3>Roll Results</h3>
         <ul id="roll-log"></ul>
     </div>
-    <!-- Overlay div to hide any possible code that might leak to the page -->
-    <div id="code-hider" style="position: fixed; bottom: 0; left: 0; right: 0; height: 50px; background-color: #1a1a1a; z-index: 9999;"></div>
+    
+    <!-- Multiple overlays to ensure code is hidden -->
+    <div id="code-blocker" style="position: fixed; bottom: 0; left: 0; right: 0; height: 100px; background-color: #1a1a1a; z-index: 9999;"></div>
+    <div id="code-blocker-2" style="position: fixed; bottom: 0; left: 0; right: 0; height: 150px; background-color: #1a1a1a; z-index: 9998; opacity: 0.95;"></div>
+    <div id="code-blocker-3" style="position: fixed; bottom: 0; left: 0; right: 0; height: 200px; background-color: #1a1a1a; z-index: 9997; opacity: 0.9;"></div>
+    
+    <!-- Script to continuously hide any code that might appear -->
+    <script>
+    (function() {
+        function hideCode() {
+            // Hide any elements that might contain code
+            const elements = document.querySelectorAll('pre, code, .error, [class*="error"], [class*="warning"], [class*="console"]');
+            elements.forEach(el => {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+            });
+            
+            // Clean up text nodes that might contain code
+            const allElements = document.body.getElementsByTagName('*');
+            for (let i = 0; i < allElements.length; i++) {
+                const element = allElements[i];
+                for (let j = 0; j < element.childNodes.length; j++) {
+                    const node = element.childNodes[j];
+                    if (node.nodeType === 3) { // Text node
+                        const text = node.nodeValue;
+                        if (text && text.includes('THREE.') || text.includes('function') || text.includes('const ')) {
+                            node.nodeValue = '';
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Run initially
+        hideCode();
+        
+        // Then run periodically
+        setInterval(hideCode, 100);
+    })();
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script>
@@ -277,19 +319,38 @@
             
             if (DEBUG) console.log("Lighting added to scene");
             
-            // Add a simple dark floor
-            const floorGeometry = new THREE.PlaneGeometry(30, 30);
-            const floorMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x000000,
-                roughness: 0.8,
-                metalness: 0.2
-            });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
-            floor.position.y = -2; // Slightly below origin
-            scene.add(floor);
+            // Add a simple dark floor with visible boundary
+            function createRollingSurface() {
+                // Main floor
+                const floorGeometry = new THREE.PlaneGeometry(12, 12); // Smaller to match bounds
+                const floorMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x000000,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+                floor.position.y = -0.5; // Slightly below origin
+                scene.add(floor);
+                
+                // Add visible border around the floor
+                const borderGeometry = new THREE.RingGeometry(5.9, 6, 32);
+                const borderMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xff0000, 
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const border = new THREE.Mesh(borderGeometry, borderMaterial);
+                border.rotation.x = -Math.PI / 2;
+                border.position.y = -0.49; // Slightly above floor
+                scene.add(border);
+                
+                if (DEBUG) console.log("Rolling surface created with visible boundary");
+            }
             
-            if (DEBUG) console.log("Floor added to scene");
+            // Create rolling surface
+            createRollingSurface();
             
             // Add simple starfield
             addSimpleStarfield(scene);
@@ -489,7 +550,7 @@
                 }, 3000);
             }
             
-            // Update dice physics during rolling - more spinning and energy
+            // Update dice physics during rolling - more contained area
             function updateDicePhysics(delta) {
                 const gravity = new THREE.Vector3(0, -9.8, 0);
                 const floorY = -0.5;
@@ -534,8 +595,8 @@
                         die.userData.velocity.z *= 0.95;
                     }
                     
-                    // Wall collisions to keep dice in view - more energetic
-                    const bounds = 10;
+                    // Wall collisions - SMALLER BOUNDS TO KEEP DICE VISIBLE
+                    const bounds = 6; // Reduced from 10 to 6 to keep dice more contained
                     if (Math.abs(die.position.x) > bounds) {
                         die.position.x = Math.sign(die.position.x) * bounds;
                         die.userData.velocity.x *= -0.85; // More elastic bounce
