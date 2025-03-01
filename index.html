@@ -209,33 +209,123 @@
             camera.position.z = 7;
             camera.position.y = 2;
 
-            // Add a more visible table surface
-            const tableGeometry = new THREE.PlaneGeometry(20, 20);
+            // Add a space-themed environment with stars
+            function createStarfield() {
+                // Create starfield points
+                const starCount = 3000;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(starCount * 3);
+                const sizes = new Float32Array(starCount);
+                const colors = new Float32Array(starCount * 3);
+                
+                for (let i = 0; i < starCount; i++) {
+                    // Position stars in a large sphere around the scene
+                    const radius = 40 + Math.random() * 10;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    
+                    positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                    positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                    positions[i * 3 + 2] = radius * Math.cos(phi);
+                    
+                    // Random star sizes
+                    sizes[i] = Math.random() * 2 + 0.5;
+                    
+                    // Random star colors (mostly white with some color variation)
+                    const starColor = Math.random();
+                    if (starColor > 0.9) {
+                        // Bluish stars
+                        colors[i * 3] = 0.7 + Math.random() * 0.3;
+                        colors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
+                        colors[i * 3 + 2] = 1.0;
+                    } else if (starColor > 0.8) {
+                        // Reddish stars
+                        colors[i * 3] = 1.0;
+                        colors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
+                        colors[i * 3 + 2] = 0.7 + Math.random() * 0.3;
+                    } else {
+                        // White stars
+                        colors[i * 3] = 1.0;
+                        colors[i * 3 + 1] = 1.0;
+                        colors[i * 3 + 2] = 1.0;
+                    }
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const starsMaterial = new THREE.PointsMaterial({
+                    size: 0.8,
+                    sizeAttenuation: true,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const stars = new THREE.Points(geometry, starsMaterial);
+                scene.add(stars);
+                
+                // Add a few bright "hero" stars
+                const bigStarCount = 50;
+                const bigStarGeometry = new THREE.BufferGeometry();
+                const bigStarPositions = new Float32Array(bigStarCount * 3);
+                const bigStarSizes = new Float32Array(bigStarCount);
+                
+                for (let i = 0; i < bigStarCount; i++) {
+                    const radius = 38 + Math.random() * 10;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    
+                    bigStarPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                    bigStarPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                    bigStarPositions[i * 3 + 2] = radius * Math.cos(phi);
+                    
+                    bigStarSizes[i] = Math.random() * 3 + 2;
+                }
+                
+                bigStarGeometry.setAttribute('position', new THREE.BufferAttribute(bigStarPositions, 3));
+                bigStarGeometry.setAttribute('size', new THREE.BufferAttribute(bigStarSizes, 1));
+                
+                const bigStarsMaterial = new THREE.PointsMaterial({
+                    color: 0xffffff,
+                    size: 2,
+                    sizeAttenuation: true,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const bigStars = new THREE.Points(bigStarGeometry, bigStarsMaterial);
+                scene.add(bigStars);
+            }
+            
+            // Create starfield
+            createStarfield();
+
+            // Add a black table surface
+            const tableGeometry = new THREE.PlaneGeometry(30, 30);
             const tableMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x333333, 
-                roughness: 0.5,
-                metalness: 0.1
+                color: 0x000000, 
+                roughness: 0.9,  // Very high roughness (less reflective)
+                metalness: 0.0   // No metallic quality
             });
             const table = new THREE.Mesh(tableGeometry, tableMaterial);
             table.rotation.x = -Math.PI / 2;
-            table.position.y = 0; // Higher position to match the new physics
-            
-            // Add grid lines to the table
-            const gridHelper = new THREE.GridHelper(20, 20, 0x666666, 0x444444);
-            gridHelper.position.y = 0.01; // Slightly above table to avoid z-fighting
-            
+            table.position.y = 0;
             scene.add(table);
-            scene.add(gridHelper);
-
-            // Brighter dice colors
-            const diceColors = {
-                d4: 0xff5555,   // Bright Red
-                d6: 0x55ff55,   // Bright Green
-                d8: 0x5555ff,   // Bright Blue
-                d10: 0xff55ff,  // Bright Purple
-                d12: 0xffff55,  // Bright Yellow
-                d20: 0x55ffff   // Bright Cyan
-            };
+            
+            // Add subtle edge glow to the table
+            const tableEdgeGeometry = new THREE.RingGeometry(14.8, 15, 64);
+            const tableEdgeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x0066ff, 
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const tableEdge = new THREE.Mesh(tableEdgeGeometry, tableEdgeMaterial);
+            tableEdge.rotation.x = -Math.PI / 2;
+            tableEdge.position.y = 0.01;
+            scene.add(tableEdge);
 
             // Dice management
             const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
@@ -445,6 +535,47 @@
                     });
                 }
             }
+                if (totalDice === 0) return;
+                
+                // Arrange in a more compact grid
+                if (totalDice <= 25) {
+                    const gridSize = Math.ceil(Math.sqrt(totalDice));
+                    const spacing = 1.8; // Closer spacing
+                    const offset = (gridSize - 1) * spacing / 2;
+                    
+                    dice.forEach((die, index) => {
+                        const row = Math.floor(index / gridSize);
+                        const col = index % gridSize;
+                        die.position.set(
+                            col * spacing - offset,
+                            0.5, // Slightly elevated for better visibility
+                            row * spacing - offset
+                        );
+                        
+                        // Random initial orientation
+                        die.rotation.set(
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 2
+                        );
+                        
+                        // Add slight scale variation for visual interest
+                        const scale = 0.85 + Math.random() * 0.3;
+                        die.scale.set(scale, scale, scale);
+                    });
+                } else {
+                    // Fallback to circular arrangement for many dice
+                    const radius = Math.min(totalDice * 0.3, 4);
+                    dice.forEach((die, index) => {
+                        const angle = (index / totalDice) * Math.PI * 2;
+                        die.position.set(
+                            Math.cos(angle) * radius,
+                            0.5,
+                            Math.sin(angle) * radius
+                        );
+                    });
+                }
+            }
 
             // Update control displays
             function updateControls() {
@@ -479,7 +610,7 @@
                 }
             }
 
-            // Improved roll animation with better physics
+            // Much more forceful roll animation with harder throws
             function rollDice() {
                 if (dice.length === 0) return;
                 
@@ -494,34 +625,34 @@
                     return result;
                 });
                 
-                // Set initial physics for roll animation - more natural and visible
+                // Set initial physics for much more forceful roll
                 dice.forEach(die => {
                     die.userData.isRolling = true;
                     die.userData.rollTime = 0;
                     
-                    // More energetic initial velocity
+                    // MUCH more forceful initial velocity
                     die.userData.rollingSpeed = new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.8, // More horizontal movement
-                        Math.random() * 0.3 + 0.3,   // Higher initial toss
-                        (Math.random() - 0.5) * 0.8  // More horizontal movement
+                        (Math.random() - 0.5) * 5.0, // Much stronger horizontal force
+                        Math.random() * 2.0 + 1.5,   // Higher initial toss
+                        (Math.random() - 0.5) * 5.0  // Much stronger horizontal force
                     );
                     
-                    // More energetic angular velocity
+                    // Much more energetic angular velocity for dramatic spins
                     die.userData.angularVelocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 1.2, // Faster rotation
-                        (Math.random() - 0.5) * 1.2,
-                        (Math.random() - 0.5) * 1.2
+                        (Math.random() - 0.5) * 12.0, // Very fast rotation
+                        (Math.random() - 0.5) * 12.0,
+                        (Math.random() - 0.5) * 12.0
                     );
                     
-                    // Higher initial position for better visibility
-                    die.position.y = 2 + Math.random() * 1.5;
+                    // Higher initial position for more dramatic drops
+                    die.position.y = 4 + Math.random() * 2;
                     
                     // Reset scale to normal
                     die.scale.set(1, 1, 1);
                 });
                 
-                // Roll duration - slightly longer for better animation
-                const rollDuration = 1800; // milliseconds
+                // Roll duration - longer for more dramatic animation
+                const rollDuration = 2500; // milliseconds
                 
                 // After animation completes, set the final orientation for the result
                 setTimeout(() => {
@@ -582,11 +713,11 @@
                 }
             }
 
-            // Simplified and improved physics update for rolling dice
+            // Enhanced physics update for more energetic and longer rolling
             function updateDicePhysics(delta) {
-                const gravity = new THREE.Vector3(0, -9.8, 0);
-                const airResistance = 0.97; // Slightly higher air resistance
-                const tableY = 0; // Height of the table surface - higher for better visibility
+                const gravity = new THREE.Vector3(0, -12.0, 0); // Stronger gravity
+                const airResistance = 0.98; // Lower air resistance for longer rolls
+                const tableY = 0; // Height of the table surface
                 
                 dice.forEach(die => {
                     if (die.userData.isRolling) {
@@ -609,33 +740,47 @@
                         if (die.position.y - 0.5 < tableY) {
                             die.position.y = tableY + 0.5;
                             
-                            // More energetic bounce
-                            die.userData.rollingSpeed.y = Math.abs(die.userData.rollingSpeed.y) * 0.7;
+                            // More energetic bounce - conserve more energy
+                            die.userData.rollingSpeed.y = Math.abs(die.userData.rollingSpeed.y) * 0.8;
                             
                             // Add a minimum bounce height for visual interest
-                            if (die.userData.rollingSpeed.y < 0.4 && die.userData.rollingSpeed.y > 0.05) {
-                                die.userData.rollingSpeed.y = 0.4;
+                            if (die.userData.rollingSpeed.y < 0.8 && die.userData.rollingSpeed.y > 0.1) {
+                                die.userData.rollingSpeed.y = 0.8;
                             }
                             
-                            // More visible rotation on bounce
-                            const bounceRotation = Math.random() * 0.6 + 0.3;
+                            // More dramatic rotation on bounce
+                            const bounceRotation = Math.random() * 1.2 + 0.5;
                             die.userData.angularVelocity.x += (Math.random() - 0.5) * bounceRotation;
                             die.userData.angularVelocity.z += (Math.random() - 0.5) * bounceRotation;
                             
-                            // Less friction with table for longer rolls
-                            die.userData.rollingSpeed.x *= 0.9;
-                            die.userData.rollingSpeed.z *= 0.9;
+                            // Less friction with table for longer, more dynamic rolls
+                            die.userData.rollingSpeed.x *= 0.95;
+                            die.userData.rollingSpeed.z *= 0.95;
                         }
                         
-                        // Tighter boundary checks to keep dice visible
-                        const boundary = 5;
+                        // Boundary checks with more elastic collisions for dramatic bounces
+                        const boundary = 12; // Larger boundary
                         if (Math.abs(die.position.x) > boundary) {
                             die.position.x = Math.sign(die.position.x) * boundary;
-                            die.userData.rollingSpeed.x *= -0.8; // More elastic wall bounce
+                            die.userData.rollingSpeed.x *= -0.9; // More elastic wall bounce
+                            
+                            // Add some random vertical bounce off walls
+                            die.userData.rollingSpeed.y += Math.random() * 1.0;
+                            
+                            // Add some random spin when hitting walls
+                            die.userData.angularVelocity.y += (Math.random() - 0.5) * 2.0;
+                            die.userData.angularVelocity.z += (Math.random() - 0.5) * 2.0;
                         }
                         if (Math.abs(die.position.z) > boundary) {
                             die.position.z = Math.sign(die.position.z) * boundary;
-                            die.userData.rollingSpeed.z *= -0.8; // More elastic wall bounce
+                            die.userData.rollingSpeed.z *= -0.9; // More elastic wall bounce
+                            
+                            // Add some random vertical bounce off walls
+                            die.userData.rollingSpeed.y += Math.random() * 1.0;
+                            
+                            // Add some random spin when hitting walls
+                            die.userData.angularVelocity.x += (Math.random() - 0.5) * 2.0;
+                            die.userData.angularVelocity.y += (Math.random() - 0.5) * 2.0;
                         }
                     }
                 });
@@ -688,13 +833,15 @@
                 renderer.setSize(container.clientWidth, container.clientHeight);
             });
             
-            // Add a variety of dice for initial display
-            addDie('d4');
-            addDie('d6');
-            addDie('d8');
-            addDie('d10');
-            addDie('d12');
-            addDie('d20');
+            // Brighter dice colors with more contrast against black background
+            const diceColors = {
+                d4: 0xff5555,   // Bright Red
+                d6: 0x55ff55,   // Bright Green
+                d8: 0x5555ff,   // Bright Blue
+                d10: 0xff55ff,  // Bright Purple
+                d12: 0xffff55,  // Bright Yellow
+                d20: 0x55ffff   // Bright Cyan
+            };
         });
     </script>
 </body>
