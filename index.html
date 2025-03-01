@@ -4,15 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D D&D Dice Roller</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:,">>
     <style id="dice-styles">
-        /* Hide all text that's not in our core elements */
-        *:not(style):not(script):not(#controls *):not(#roll-button):not(#results *):not(#canvas-container):not(.dice-control *):not(.die-result):not(.total-result):not(title):not(meta) {
-            font-size: 0 !important;
-            color: transparent !important;
-        }
-    </style>>
-    <style>
+        /* More selective text hiding that preserves UI text */
         body {
             margin: 0;
             background-color: #1a1a1a;
@@ -24,18 +18,22 @@
             min-height: 100vh;
             overflow-y: auto;
             padding-bottom: 20px;
-            position: relative;
         }
         
-        /* Completely hide any text that might be script code */
-        body > *:not(#controls):not(#canvas-container):not(#roll-button):not(#results):not(style):not(script):not(noscript):not(meta):not(link):not(title) {
-            display: none !important;
-            visibility: hidden !important;
+        /* Don't hide text in our UI elements */
+        #controls, #roll-button, #results, .dice-control, .die-result, .total-result {
+            color: inherit !important;
+            font-size: inherit !important;
+        }
+        
+        /* Hide any code that might be shown elsewhere */
+        body > *:not(#controls):not(#canvas-container):not(#roll-button):not(#results):not(style):not(script):not(head) {
+            color: transparent !important;
+            font-size: 0 !important;
             height: 0 !important;
-            width: 0 !important;
-            opacity: 0 !important;
+            overflow: hidden !important;
             position: absolute !important;
-            z-index: -9999 !important;
+            z-index: -1000 !important;
         }
         
         #controls {
@@ -167,16 +165,6 @@
             font-weight: bold;
             width: fit-content;
         }
-        /* Hide any error messages or code leaks */
-        pre, code, .error, .warning, .message, .console {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            width: 0 !important;
-            opacity: 0 !important;
-            position: absolute !important;
-            z-index: -9999 !important;
-        }
     </style>
 </head>
 <body>
@@ -223,76 +211,88 @@
     <script>
     (function() {
         document.addEventListener("DOMContentLoaded", function() {
-            // Create an iframe to catch and hide any leaked scripts
-            var scriptCatcher = document.createElement('iframe');
-            scriptCatcher.style.position = 'absolute';
-            scriptCatcher.style.top = '-9999px';
-            scriptCatcher.style.left = '-9999px';
-            scriptCatcher.style.width = '1px';
-            scriptCatcher.style.height = '1px';
-            scriptCatcher.style.opacity = '0';
-            document.body.appendChild(scriptCatcher);
+            // Function to ensure text is visible in UI elements
+            function ensureUIText() {
+                // Make sure dice button text is visible
+                const diceLabels = document.querySelectorAll('.dice-control span');
+                diceLabels.forEach(label => {
+                    label.style.visibility = 'visible';
+                    label.style.color = 'yellow';
+                    label.style.fontWeight = 'bold';
+                });
+                
+                // Make sure log content is visible
+                const logItems = document.querySelectorAll('#roll-log li, .die-result, .total-result');
+                logItems.forEach(item => {
+                    item.style.visibility = 'visible';
+                    item.style.color = 'white';
+                });
+                
+                // Make sure Roll Dice button text is visible
+                const rollButton = document.getElementById('roll-button');
+                if (rollButton) {
+                    rollButton.style.visibility = 'visible';
+                    rollButton.style.color = 'white';
+                }
+                
+                // Make sure Results header is visible
+                const resultsHeader = document.querySelector('#results h3');
+                if (resultsHeader) {
+                    resultsHeader.style.visibility = 'visible';
+                    resultsHeader.style.color = 'yellow';
+                }
+            }
             
-            // Function to remove any unwanted text nodes
+            // Run immediately and periodically to ensure UI is visible
+            ensureUIText();
+            setInterval(ensureUIText, 200);
+            
+            // Clean any unwanted text nodes that could contain code
             function cleanTextNodes() {
                 const walker = document.createTreeWalker(
-                    document.body,
-                    NodeFilter.SHOW_TEXT,
-                    null,
+                    document.body, 
+                    NodeFilter.SHOW_TEXT, 
+                    {
+                        acceptNode: function(node) {
+                            // Skip text nodes in our UI elements
+                            let parent = node.parentNode;
+                            while (parent) {
+                                if (parent.id === 'controls' || 
+                                    parent.id === 'roll-button' || 
+                                    parent.id === 'results' ||
+                                    parent.className && parent.className.includes('dice-control') ||
+                                    parent.className && parent.className.includes('die-result') ||
+                                    parent.className && parent.className.includes('total-result')) {
+                                    return NodeFilter.FILTER_REJECT;
+                                }
+                                parent = parent.parentNode;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    }, 
                     false
                 );
                 
-                const nodesToRemove = [];
-                let node;
-                while (node = walker.nextNode()) {
-                    // Check if this text node contains code-like content
-                    if (node.nodeValue && 
-                        (node.nodeValue.includes('THREE.') || 
-                         node.nodeValue.includes('function ') || 
-                         node.nodeValue.includes('const ') || 
-                         node.nodeValue.includes('let ') ||
-                         node.nodeValue.includes('var ') ||
-                         node.nodeValue.includes('Math.') ||
-                         node.nodeValue.includes('console.') ||
-                         node.nodeValue.includes('document.') ||
-                         node.nodeValue.includes('new '))) {
-                        // Don't remove nodes inside our valid UI elements
-                        let parent = node.parentNode;
-                        let isInUI = false;
-                        
-                        while (parent) {
-                            if (parent.id === 'controls' || 
-                                parent.id === 'canvas-container' || 
-                                parent.id === 'roll-button' || 
-                                parent.id === 'results' ||
-                                parent.nodeName === 'SCRIPT' ||
-                                parent.nodeName === 'STYLE') {
-                                isInUI = true;
-                                break;
-                            }
-                            parent = parent.parentNode;
-                        }
-                        
-                        if (!isInUI) {
-                            nodesToRemove.push(node);
-                        }
+                let textNode;
+                while(textNode = walker.nextNode()) {
+                    if(textNode.nodeValue && 
+                      (textNode.nodeValue.includes('function') || 
+                       textNode.nodeValue.includes('const ') || 
+                       textNode.nodeValue.includes('let ') ||
+                       textNode.nodeValue.includes('var ') ||
+                       textNode.nodeValue.includes('THREE.') ||
+                       textNode.nodeValue.includes('Math.') ||
+                       textNode.nodeValue.includes('console.') ||
+                       textNode.nodeValue.includes('document.') ||
+                       textNode.nodeValue.includes('new '))) {
+                        textNode.nodeValue = '';
                     }
                 }
-                
-                // Remove the unwanted nodes
-                nodesToRemove.forEach(node => {
-                    node.nodeValue = '';
-                });
             }
             
-            // Run frequently to catch any new nodes
-            setInterval(cleanTextNodes, 100);
-            
-            // Also handle error events to prevent them showing in the console
-            window.addEventListener('error', function(e) {
-                e.preventDefault();
-                return true;
-            }, true);
+            // Run immediately and periodically
+            cleanTextNodes();
+            setInterval(cleanTextNodes, 500);
         });
     })();
     </script>
@@ -695,7 +695,7 @@
                 });
             }
             
-            // Display roll results - improved formatting
+            // Display roll results - simplified format matching original
             function displayResults() {
                 const rollLog = document.getElementById('roll-log');
                 
@@ -715,7 +715,7 @@
                     totalSum += result;
                 });
                 
-                // Create formatted results HTML with better layout
+                // Create formatted results HTML matching original format
                 let resultHTML = '';
                 
                 // Get the types in order from lowest to highest die
@@ -723,15 +723,15 @@
                     return parseInt(a.slice(1)) - parseInt(b.slice(1));
                 });
                 
-                // Create die results with proper formatting
+                // Format like original D20: [13, 13] style
                 for (const type of orderedTypes) {
                     if (resultsByType[type].length > 0) {
                         resultHTML += `<span class="${type}-result">${type.toUpperCase()}: [${resultsByType[type].join(', ')}]</span> `;
                     }
                 }
                 
-                // Add total on its own line for better visibility
-                resultHTML += `<div class="total-result">Total: ${totalSum}</div>`;
+                // Add total in original style
+                resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
                 
                 // Add to log
                 const logEntry = document.createElement('li');
@@ -742,10 +742,6 @@
                 while (rollLog.children.length > 10) {
                     rollLog.removeChild(rollLog.lastChild);
                 }
-                
-                // Scroll to top of results to ensure the latest roll is visible
-                const resultsContainer = document.getElementById('results');
-                resultsContainer.scrollTop = 0;
             }
             
             // Simple star field
@@ -1276,13 +1272,15 @@
                 }
             }
 
-            // Update control displays with error handling
+            // Update control displays - made more robust
             function updateControls() {
                 try {
                     diceTypes.forEach(type => {
                         const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
                         if (control) {
-                            control.textContent = `${type.toUpperCase()}: ${diceCounts[type]}`;
+                            control.innerText = `${type.toUpperCase()}: ${diceCounts[type]}`;
+                            control.style.visibility = 'visible'; // Ensure visibility
+                            control.style.display = 'inline'; // Ensure display
                         }
                     });
                 } catch (error) {
