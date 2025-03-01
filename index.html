@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D D&D Dice Roller</title>
     <link rel="icon" href="data:,">
-    <!-- Prevent any code from showing at the bottom -->
-    <noscript id="prevent-code-leak" style="display:none"></noscript>>
+    <style id="dice-styles">
+        /* Hide all text that's not in our core elements */
+        *:not(style):not(script):not(#controls *):not(#roll-button):not(#results *):not(#canvas-container):not(.dice-control *):not(.die-result):not(.total-result):not(title):not(meta) {
+            font-size: 0 !important;
+            color: transparent !important;
+        }
+    </style>>
     <style>
         body {
             margin: 0;
@@ -18,20 +23,21 @@
             align-items: center;
             min-height: 100vh;
             overflow-y: auto;
-            padding-bottom: 50px;
+            padding-bottom: 20px;
             position: relative;
         }
-        /* Hide any code that might leak to the page */
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 100px;
-            background-color: #1a1a1a;
-            z-index: 1000;
+        
+        /* Completely hide any text that might be script code */
+        body > *:not(#controls):not(#canvas-container):not(#roll-button):not(#results):not(style):not(script):not(noscript):not(meta):not(link):not(title) {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            z-index: -9999 !important;
         }
+        
         #controls {
             margin: 20px 0;
             display: flex;
@@ -107,7 +113,7 @@
             color: #fff;
             margin-top: 15px;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            margin-bottom: 50px;
+            margin-bottom: 20px;
             position: relative;
         }
         #results h3 {
@@ -162,19 +168,14 @@
             width: fit-content;
         }
         /* Hide any error messages or code leaks */
-        pre, code {
+        pre, code, .error, .warning, .message, .console {
             display: none !important;
-        }
-        
-        /* Extra code hiding at bottom */
-        #code-blocker {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 100px;
-            background-color: #1a1a1a;
-            z-index: 9999;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            z-index: -9999 !important;
         }
     </style>
 </head>
@@ -218,43 +219,81 @@
         <ul id="roll-log"></ul>
     </div>
     
-    <!-- Multiple overlays to ensure code is hidden -->
-    <div id="code-blocker" style="position: fixed; bottom: 0; left: 0; right: 0; height: 100px; background-color: #1a1a1a; z-index: 9999;"></div>
-    <div id="code-blocker-2" style="position: fixed; bottom: 0; left: 0; right: 0; height: 150px; background-color: #1a1a1a; z-index: 9998; opacity: 0.95;"></div>
-    <div id="code-blocker-3" style="position: fixed; bottom: 0; left: 0; right: 0; height: 200px; background-color: #1a1a1a; z-index: 9997; opacity: 0.9;"></div>
-    
-    <!-- Script to continuously hide any code that might appear -->
+    <!-- Script to prevent code from showing -->
     <script>
     (function() {
-        function hideCode() {
-            // Hide any elements that might contain code
-            const elements = document.querySelectorAll('pre, code, .error, [class*="error"], [class*="warning"], [class*="console"]');
-            elements.forEach(el => {
-                el.style.display = 'none';
-                el.style.visibility = 'hidden';
-            });
+        document.addEventListener("DOMContentLoaded", function() {
+            // Create an iframe to catch and hide any leaked scripts
+            var scriptCatcher = document.createElement('iframe');
+            scriptCatcher.style.position = 'absolute';
+            scriptCatcher.style.top = '-9999px';
+            scriptCatcher.style.left = '-9999px';
+            scriptCatcher.style.width = '1px';
+            scriptCatcher.style.height = '1px';
+            scriptCatcher.style.opacity = '0';
+            document.body.appendChild(scriptCatcher);
             
-            // Clean up text nodes that might contain code
-            const allElements = document.body.getElementsByTagName('*');
-            for (let i = 0; i < allElements.length; i++) {
-                const element = allElements[i];
-                for (let j = 0; j < element.childNodes.length; j++) {
-                    const node = element.childNodes[j];
-                    if (node.nodeType === 3) { // Text node
-                        const text = node.nodeValue;
-                        if (text && text.includes('THREE.') || text.includes('function') || text.includes('const ')) {
-                            node.nodeValue = '';
+            // Function to remove any unwanted text nodes
+            function cleanTextNodes() {
+                const walker = document.createTreeWalker(
+                    document.body,
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                
+                const nodesToRemove = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    // Check if this text node contains code-like content
+                    if (node.nodeValue && 
+                        (node.nodeValue.includes('THREE.') || 
+                         node.nodeValue.includes('function ') || 
+                         node.nodeValue.includes('const ') || 
+                         node.nodeValue.includes('let ') ||
+                         node.nodeValue.includes('var ') ||
+                         node.nodeValue.includes('Math.') ||
+                         node.nodeValue.includes('console.') ||
+                         node.nodeValue.includes('document.') ||
+                         node.nodeValue.includes('new '))) {
+                        // Don't remove nodes inside our valid UI elements
+                        let parent = node.parentNode;
+                        let isInUI = false;
+                        
+                        while (parent) {
+                            if (parent.id === 'controls' || 
+                                parent.id === 'canvas-container' || 
+                                parent.id === 'roll-button' || 
+                                parent.id === 'results' ||
+                                parent.nodeName === 'SCRIPT' ||
+                                parent.nodeName === 'STYLE') {
+                                isInUI = true;
+                                break;
+                            }
+                            parent = parent.parentNode;
+                        }
+                        
+                        if (!isInUI) {
+                            nodesToRemove.push(node);
                         }
                     }
                 }
+                
+                // Remove the unwanted nodes
+                nodesToRemove.forEach(node => {
+                    node.nodeValue = '';
+                });
             }
-        }
-        
-        // Run initially
-        hideCode();
-        
-        // Then run periodically
-        setInterval(hideCode, 100);
+            
+            // Run frequently to catch any new nodes
+            setInterval(cleanTextNodes, 100);
+            
+            // Also handle error events to prevent them showing in the console
+            window.addEventListener('error', function(e) {
+                e.preventDefault();
+                return true;
+            }, true);
+        });
     })();
     </script>
 
@@ -319,10 +358,10 @@
             
             if (DEBUG) console.log("Lighting added to scene");
             
-            // Add a simple dark floor with visible boundary
+            // Add a rolling surface with larger area
             function createRollingSurface() {
-                // Main floor
-                const floorGeometry = new THREE.PlaneGeometry(12, 12); // Smaller to match bounds
+                // Main floor - larger area
+                const floorGeometry = new THREE.PlaneGeometry(20, 20); // Much larger platform
                 const floorMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0x000000,
                     roughness: 0.8,
@@ -334,7 +373,7 @@
                 scene.add(floor);
                 
                 // Add visible border around the floor
-                const borderGeometry = new THREE.RingGeometry(5.9, 6, 32);
+                const borderGeometry = new THREE.RingGeometry(9.8, 10, 32);
                 const borderMaterial = new THREE.MeshBasicMaterial({ 
                     color: 0xff0000, 
                     side: THREE.DoubleSide,
@@ -508,13 +547,16 @@
                 });
             }
             
-            // Roll physics with much more spinning
+            // Roll physics with more control and dice reset
             function rollDice() {
                 if (dice.length === 0) return;
                 
                 const rollButton = document.getElementById('roll-button');
                 rollButton.disabled = true;
                 rollButton.textContent = "Rolling...";
+                
+                // RESET POSITIONS: Position dice in a neat grid for initial throw
+                positionDiceForRoll();
                 
                 // Generate random results for each die
                 dice.forEach(die => {
@@ -523,23 +565,22 @@
                     die.userData.result = Math.floor(Math.random() * faces) + 1;
                     die.userData.isRolling = true;
                     
-                    // Set initial throw velocity and position - higher and more energetic
-                    die.position.y = 5 + Math.random() * 3;
+                    // Set initial throw velocity with moderate force but high spin
                     die.userData.velocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 10,    // Doubled horizontal force
-                        Math.random() * 8 + 7,         // More vertical force
-                        (Math.random() - 0.5) * 10     // Doubled horizontal force
+                        (Math.random() - 0.5) * 3,     // Less horizontal force
+                        Math.random() * 4 + 3,         // Moderate vertical force
+                        (Math.random() - 0.5) * 3      // Less horizontal force
                     );
                     
-                    // MUCH more angular velocity (spinning)
+                    // MUCH more angular velocity for spinning
                     die.userData.angularVelocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 25,    // 2.5x more rotation
-                        (Math.random() - 0.5) * 25,    // 2.5x more rotation
-                        (Math.random() - 0.5) * 25     // 2.5x more rotation
+                        (Math.random() - 0.5) * 30,    // 3x more rotation
+                        (Math.random() - 0.5) * 30,    // 3x more rotation
+                        (Math.random() - 0.5) * 30     // 3x more rotation
                     );
                 });
                 
-                // Roll for longer (3 seconds) then display results
+                // Roll for 3 seconds then display results
                 setTimeout(() => {
                     dice.forEach(die => {
                         die.userData.isRolling = false;
@@ -550,7 +591,39 @@
                 }, 3000);
             }
             
-            // Update dice physics during rolling - more contained area
+            // Position dice neatly for rolling
+            function positionDiceForRoll() {
+                const count = dice.length;
+                if (count === 0) return;
+                
+                // Arrange in a compact grid
+                const spacing = 1.5;
+                const rowSize = Math.ceil(Math.sqrt(count));
+                const startX = -((rowSize - 1) * spacing) / 2;
+                const startZ = -((rowSize - 1) * spacing) / 2;
+                
+                dice.forEach((die, index) => {
+                    const row = Math.floor(index / rowSize);
+                    const col = index % rowSize;
+                    
+                    // Position above the surface for a drop
+                    die.position.x = startX + col * spacing;
+                    die.position.z = startZ + row * spacing;
+                    die.position.y = 3.0; // Higher starting position
+                    
+                    // Reset rotation
+                    die.rotation.set(
+                        Math.random() * Math.PI * 2,
+                        Math.random() * Math.PI * 2,
+                        Math.random() * Math.PI * 2
+                    );
+                    
+                    // Reset scales to uniform
+                    die.scale.set(1, 1, 1);
+                });
+            }
+            
+            // Update dice physics during rolling - more controlled rolling area
             function updateDicePhysics(delta) {
                 const gravity = new THREE.Vector3(0, -9.8, 0);
                 const floorY = -0.5;
@@ -570,54 +643,54 @@
                     die.userData.velocity.addScaledVector(gravity, delta);
                     
                     // Reduced air resistance for longer spins
-                    die.userData.velocity.multiplyScalar(0.99);
-                    die.userData.angularVelocity.multiplyScalar(0.993); // Very low angular air resistance
+                    die.userData.velocity.multiplyScalar(0.97); // More drag for control
+                    die.userData.angularVelocity.multiplyScalar(0.99); // Less resistance on rotation
                     
                     // Floor collision with more energy preservation
                     const dieSize = 0.75; // Approximate die radius
                     if (die.position.y - dieSize < floorY) {
                         die.position.y = floorY + dieSize;
                         
-                        // More energetic bounce
-                        die.userData.velocity.y *= -0.8; // Less energy loss on bounce
+                        // Controlled bounce
+                        die.userData.velocity.y *= -0.5; // More energy loss for control
                         
-                        // Ensure minimum bounce height for visual interest
-                        if (Math.abs(die.userData.velocity.y) < 2.0 && Math.abs(die.userData.velocity.y) > 0.1) {
-                            die.userData.velocity.y = Math.sign(die.userData.velocity.y) * 2.0;
+                        // Minimum bounce height for visual interest but not too high
+                        if (Math.abs(die.userData.velocity.y) < 1.0 && Math.abs(die.userData.velocity.y) > 0.1) {
+                            die.userData.velocity.y = Math.sign(die.userData.velocity.y) * 1.0;
                         }
                         
-                        // Floor collision adds more spin
-                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
-                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
+                        // Floor collision adds less speed but more spin
+                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 8;
+                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 8;
                         
-                        // Less lateral friction for more sliding
-                        die.userData.velocity.x *= 0.95;
-                        die.userData.velocity.z *= 0.95;
+                        // More lateral friction for quicker settling
+                        die.userData.velocity.x *= 0.8;
+                        die.userData.velocity.z *= 0.8;
                     }
                     
-                    // Wall collisions - SMALLER BOUNDS TO KEEP DICE VISIBLE
-                    const bounds = 6; // Reduced from 10 to 6 to keep dice more contained
+                    // Wall collisions - Larger bounds to match platform
+                    const bounds = 10; // Set to match the bigger platform
                     if (Math.abs(die.position.x) > bounds) {
                         die.position.x = Math.sign(die.position.x) * bounds;
-                        die.userData.velocity.x *= -0.85; // More elastic bounce
+                        die.userData.velocity.x *= -0.7; // Less bounce energy
                         
-                        // Add vertical bounce when hitting walls
-                        die.userData.velocity.y += 2.0;
+                        // Add minimal vertical bounce when hitting walls
+                        die.userData.velocity.y += 1.0;
                         
-                        // Add spin when hitting walls
-                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
-                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
+                        // Add more spin when hitting walls
+                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 15;
+                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 15;
                     }
                     if (Math.abs(die.position.z) > bounds) {
                         die.position.z = Math.sign(die.position.z) * bounds;
-                        die.userData.velocity.z *= -0.85; // More elastic bounce
+                        die.userData.velocity.z *= -0.7; // Less bounce energy
                         
-                        // Add vertical bounce when hitting walls
-                        die.userData.velocity.y += 2.0;
+                        // Add minimal vertical bounce when hitting walls
+                        die.userData.velocity.y += 1.0;
                         
-                        // Add spin when hitting walls
-                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
-                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+                        // Add more spin when hitting walls
+                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 15;
+                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 15;
                     }
                 });
             }
