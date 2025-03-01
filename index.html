@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D D&D Dice Roller</title>
-    <link rel="icon" href="data:,">>
-    <style id="dice-styles">
-        /* More selective text hiding that preserves UI text */
+    <link rel="icon" href="data:,">
+    <style>
         body {
             margin: 0;
             background-color: #1a1a1a;
@@ -15,35 +14,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            overflow-y: auto;
-            padding-bottom: 20px;
+            height: 100vh;
+            overflow: hidden;
         }
-        
-        /* Don't hide text in our UI elements */
-        #controls, #roll-button, #results, .dice-control, .die-result, .total-result {
-            color: inherit !important;
-            font-size: inherit !important;
-        }
-        
-        /* Hide any code that might be shown elsewhere */
-        body > *:not(#controls):not(#canvas-container):not(#roll-button):not(#results):not(style):not(script):not(head) {
-            color: transparent !important;
-            font-size: 0 !important;
-            height: 0 !important;
-            overflow: hidden !important;
-            position: absolute !important;
-            z-index: -1000 !important;
-        }
-        
         #controls {
             margin: 20px 0;
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            width: 90%;
-            max-width: 800px;
-            position: relative; /* To ensure clean layout */
         }
         .dice-control {
             background-color: #ff4444;
@@ -65,93 +43,70 @@
             cursor: pointer;
             font-weight: bold;
             border-radius: 3px;
-            color: #000;
         }
         .dice-control button:hover {
             background-color: #e6e600;
         }
         #canvas-container {
-            width: 90%;
-            height: 50vh;
-            border: 3px solid #ff4444;
+            width: 80%;
+            height: 50%;
+            border: 2px solid #ff4444;
             background-color: #000;
             position: relative;
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(255,68,68,0.3);
-            margin-bottom: 15px;
-            overflow: hidden;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
         }
         #roll-button {
-            margin: 15px 0;
-            padding: 12px 24px;
+            margin: 10px 0;
+            padding: 10px 20px;
             background-color: #4444ff;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
+            font-size: 16px;
         }
         #roll-button:hover {
             background-color: #3333cc;
         }
-        #roll-button:active {
-            transform: translateY(1px);
-        }
         #results {
             background-color: #222;
-            padding: 15px;
+            padding: 10px;
             border: 1px solid yellow;
             border-radius: 5px;
-            width: 90%;
-            max-width: 800px;
-            height: 200px;
+            width: 80%;
+            max-height: 200px;
             overflow-y: auto;
             color: #fff;
-            margin-top: 15px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-            position: relative;
         }
-        /* Move the Roll Results title to the top and make it fixed */
-        #results-title {
-            margin: 0 0 15px 0;
+        #results h3 {
+            margin: 0;
             color: yellow;
             border-bottom: 1px solid #444;
-            padding-bottom: 8px;
+            padding-bottom: 5px;
             position: sticky;
             top: 0;
             background-color: #222;
-            z-index: 10;
-            font-size: 18px;
-            font-weight: bold;
-            display: block;
-            width: 100%;
+            z-index: 1;
         }
         #roll-log {
             list-style-type: none;
             padding: 0;
             margin: 0;
-            padding-top: 5px; /* Give space after the title */
         }
         #roll-log li {
-            padding: 10px;
-            margin-bottom: 8px;
+            padding: 8px;
+            margin-bottom: 5px;
             background-color: #333;
             border-radius: 4px;
-            line-height: 1.5;
-            white-space: normal;
-            word-break: break-word;
         }
         #roll-log li:nth-child(odd) {
             background-color: #2a2a2a;
         }
         .die-result {
             display: inline-block;
-            padding: 4px 8px;
-            margin: 2px 4px;
+            padding: 3px 6px;
+            margin: 0 3px;
             border-radius: 3px;
             font-weight: bold;
         }
@@ -162,13 +117,11 @@
         .d12-result { background-color: rgba(255, 255, 68, 0.5); }
         .d20-result { background-color: rgba(68, 255, 255, 0.5); }
         .total-result {
-            display: inline-block;
             background-color: #ff9900;
             color: white;
-            padding: 5px 10px;
+            padding: 3px 8px;
             border-radius: 4px;
-            margin-top: 6px;
-            font-weight: bold;
+            margin-left: 8px;
         }
     </style>
 </head>
@@ -208,393 +161,194 @@
     <div id="canvas-container"></div>
     <button id="roll-button">Roll Dice</button>
     <div id="results">
-        <div id="results-title">Roll Results</div>
+        <h3>Roll Results</h3>
         <ul id="roll-log"></ul>
     </div>
-    
-    <!-- Script to prevent code from showing and remove stray elements -->
-    <script>
-    (function() {
-        document.addEventListener("DOMContentLoaded", function() {
-            // Remove any stray elements that might appear
-            function removeUnwantedElements() {
-                // Remove the orange ">" that might appear at the top
-                const allElements = document.querySelectorAll('*');
-                for (let i = 0; i < allElements.length; i++) {
-                    const el = allElements[i];
-                    
-                    // Skip our main UI elements
-                    if (el.id === 'controls' || 
-                        el.id === 'canvas-container' || 
-                        el.id === 'roll-button' || 
-                        el.id === 'results' ||
-                        el.id === 'results-title' ||
-                        el.id === 'roll-log' ||
-                        el.className && el.className.includes('dice-control') ||
-                        el.tagName === 'STYLE' ||
-                        el.tagName === 'SCRIPT' ||
-                        el.tagName === 'HEAD' ||
-                        el.tagName === 'META' ||
-                        el.tagName === 'LINK' ||
-                        el.tagName === 'TITLE') {
-                        continue;
-                    }
-                    
-                    // If the element has only a text node and it's not a UI element, remove it
-                    if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-                        if (el.textContent.includes('>') || 
-                            el.textContent.includes('//') || 
-                            el.textContent.includes('function') ||
-                            el.textContent.includes('THREE') ||
-                            el.textContent.includes('+=')) {
-                            el.textContent = '';
-                            el.style.display = 'none';
-                            el.style.visibility = 'hidden';
-                        }
-                    }
-                }
-                
-                // Specifically look for text nodes with code content
-                const textWalker = document.createTreeWalker(
-                    document.body,
-                    NodeFilter.SHOW_TEXT,
-                    null,
-                    false
-                );
-                
-                // Clean any text nodes with code-like content
-                const nodesToClean = [];
-                let node;
-                while (node = textWalker.nextNode()) {
-                    // Skip text in our main UI elements
-                    let parent = node.parentNode;
-                    let skip = false;
-                    
-                    while (parent && parent !== document.body) {
-                        if (parent.id === 'controls' || 
-                            parent.id === 'canvas-container' || 
-                            parent.id === 'roll-button' || 
-                            parent.id === 'results' ||
-                            parent.id === 'results-title' ||
-                            parent.id === 'roll-log' ||
-                            parent.className && (
-                                parent.className.includes('dice-control') ||
-                                parent.className.includes('die-result') ||
-                                parent.className.includes('total-result')
-                            )) {
-                            skip = true;
-                            break;
-                        }
-                        parent = parent.parentNode;
-                    }
-                    
-                    if (skip) continue;
-                    
-                    // Check for code-like content
-                    if (node.nodeValue && (
-                        node.nodeValue.includes('//') ||
-                        node.nodeValue.includes('function') ||
-                        node.nodeValue.includes('const ') ||
-                        node.nodeValue.includes('let ') ||
-                        node.nodeValue.includes('var ') ||
-                        node.nodeValue.includes('THREE.') ||
-                        node.nodeValue.includes('Math.') ||
-                        node.nodeValue.includes('+=') ||
-                        node.nodeValue.includes('}') ||
-                        node.nodeValue.includes('resultHTML')
-                    )) {
-                        nodesToClean.push(node);
-                    }
-                }
-                
-                // Clean the collected nodes
-                for (const node of nodesToClean) {
-                    node.nodeValue = '';
-                }
-            }
-            
-            // Function to ensure text is visible in UI elements
-            function ensureUIText() {
-                // Make sure dice button text is visible
-                const diceLabels = document.querySelectorAll('.dice-control span');
-                diceLabels.forEach(label => {
-                    label.style.visibility = 'visible';
-                    label.style.color = 'yellow';
-                    label.style.fontWeight = 'bold';
-                });
-                
-                // Make sure log content is visible
-                const logItems = document.querySelectorAll('#roll-log li, .die-result, .total-result');
-                logItems.forEach(item => {
-                    item.style.visibility = 'visible';
-                    item.style.color = 'white';
-                });
-                
-                // Make sure Roll Dice button text is visible
-                const rollButton = document.getElementById('roll-button');
-                if (rollButton) {
-                    rollButton.style.visibility = 'visible';
-                    rollButton.style.color = 'white';
-                }
-                
-                // Make sure Results header is visible
-                const resultsHeader = document.getElementById('results-title');
-                if (resultsHeader) {
-                    resultsHeader.style.visibility = 'visible';
-                    resultsHeader.style.color = 'yellow';
-                }
-            }
-            
-            // Run immediately
-            removeUnwantedElements();
-            ensureUIText();
-            
-            // Then periodically
-            setInterval(removeUnwantedElements, 100);
-            setInterval(ensureUIText, 200);
-            
-            // Add an event listener for any DOM changes
-            const observer = new MutationObserver(function(mutations) {
-                removeUnwantedElements();
-            });
-            
-            observer.observe(document.body, { 
-                childList: true, 
-                subtree: true,
-                characterData: true
-            });
-        });
-    })();
-    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script>
-        // Debug flag - set to false to suppress console logging
-        const DEBUG = false;
-        
-        // Wait for DOM and external resources to load
         window.addEventListener('load', function() {
-            if (DEBUG) console.log("Page loaded, initializing...");
-            
             if (typeof THREE === 'undefined') {
                 console.error('Three.js failed to load. Check your internet connection or the CDN link.');
-                
-                // Display a user-friendly error
-                const container = document.getElementById('canvas-container');
-                container.innerHTML = '<div style="color: white; text-align: center; padding: 20px;">Failed to load 3D graphics library. Please check your internet connection and reload the page.</div>';
                 return;
             }
-            
-            if (DEBUG) console.log("Three.js loaded successfully");
-            
-            initDiceRoller();
-        });
-        
-        function initDiceRoller() {
-            // Try-catch wrapper for the entire initialization to prevent code leaks
-            try {
-            // Basic scene setup
-            const container = document.getElementById('canvas-container');
+
+            // Scene setup
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000000); // Black background
-            
-            const camera = new THREE.PerspectiveCamera(
-                75, // Field of view
-                container.clientWidth / container.clientHeight, // Aspect ratio
-                0.1, // Near clipping plane
-                100 // Far clipping plane
-            );
-            
-            // Position the camera
-            camera.position.set(0, 3, 10);
-            camera.lookAt(0, 0, 0);
-            
-            if (DEBUG) console.log("Camera set up:", camera.position);
-            
-            // Create renderer
+            scene.background = new THREE.Color(0x000000);
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth * 0.8 / (window.innerHeight * 0.5), 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const container = document.getElementById('canvas-container');
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
-            
-            if (DEBUG) console.log("Renderer created and added to container");
-            
-            // Add lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(5, 10, 7);
-            scene.add(directionalLight);
-            
-            if (DEBUG) console.log("Lighting added to scene");
-            
-            // Add a rolling surface with larger area
-            function createRollingSurface() {
-                // Main floor - larger area
-                const floorGeometry = new THREE.PlaneGeometry(20, 20); // Much larger platform
-                const floorMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x000000,
-                    roughness: 0.8,
-                    metalness: 0.2
-                });
-                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-                floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
-                floor.position.y = -0.5; // Slightly below origin
-                scene.add(floor);
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(10, 10, 10);
+            scene.add(pointLight);
+
+            // Camera position
+            camera.position.z = 7;
+            camera.position.y = 2;
+
+            // Create starfield
+            function createStars() {
+                const starCount = 1000;
+                const starGeometry = new THREE.BufferGeometry();
+                const starVertices = [];
                 
-                // Add visible border around the floor
-                const borderGeometry = new THREE.RingGeometry(9.8, 10, 32);
-                const borderMaterial = new THREE.MeshBasicMaterial({ 
-                    color: 0xff0000, 
-                    side: THREE.DoubleSide,
-                    transparent: true,
-                    opacity: 0.5
-                });
-                const border = new THREE.Mesh(borderGeometry, borderMaterial);
-                border.rotation.x = -Math.PI / 2;
-                border.position.y = -0.49; // Slightly above floor
-                scene.add(border);
+                for (let i = 0; i < starCount; i++) {
+                    const x = Math.random() * 2000 - 1000;
+                    const y = Math.random() * 2000 - 1000;
+                    const z = Math.random() * 2000 - 1000;
+                    starVertices.push(x, y, z);
+                }
                 
-                if (DEBUG) console.log("Rolling surface created with visible boundary");
+                starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+                const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
+                const stars = new THREE.Points(starGeometry, starMaterial);
+                scene.add(stars);
             }
             
-            // Create rolling surface
-            createRollingSurface();
+            createStars();
+
+            // Add floor
+            const floorGeometry = new THREE.CircleGeometry(10, 32);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x000000, 
+                roughness: 0.8, 
+                metalness: 0.2 
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.5;
+            scene.add(floor);
             
-            // Add simple starfield
-            addSimpleStarfield(scene);
-            
+            // Add visible border
+            const borderGeometry = new THREE.RingGeometry(9.8, 10, 64);
+            const borderMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xff0000, 
+                side: THREE.DoubleSide 
+            });
+            const border = new THREE.Mesh(borderGeometry, borderMaterial);
+            border.rotation.x = -Math.PI / 2;
+            border.position.y = -0.45;
+            scene.add(border);
+
             // Dice management
             const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
             const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
             const dice = [];
-            
-            if (DEBUG) console.log("Dice arrays initialized");
-            
+
             // Dice colors
             const diceColors = {
-                d4: 0xff0000,    // Red
-                d6: 0x00ff00,    // Green
-                d8: 0x0000ff,    // Blue
-                d10: 0xff00ff,   // Purple
-                d12: 0xffff00,   // Yellow
-                d20: 0x00ffff    // Cyan
+                d4: 0xff5555,   // Red
+                d6: 0x55ff55,   // Green
+                d8: 0x5555ff,   // Blue
+                d10: 0xff55ff,  // Purple
+                d12: 0xffff55,  // Yellow
+                d20: 0x55ffff   // Cyan
             };
-            
-            // Create simple geometries for each die type
+
+            // Geometries for dice
             const geometries = {
                 d4: new THREE.TetrahedronGeometry(1),
-                d6: new THREE.BoxGeometry(1.5, 1.5, 1.5),
-                d8: new THREE.OctahedronGeometry(1.2),
-                d10: new THREE.ConeGeometry(1, 2, 10),
-                d12: new THREE.DodecahedronGeometry(1.2),
-                d20: new THREE.IcosahedronGeometry(1.2)
+                d6: new THREE.BoxGeometry(1.4, 1.4, 1.4),
+                d8: new THREE.OctahedronGeometry(1),
+                d10: new THREE.ConeGeometry(0.8, 1.5, 10),
+                d12: new THREE.DodecahedronGeometry(1),
+                d20: new THREE.IcosahedronGeometry(1)
             };
-            
-            if (DEBUG) console.log("Die geometries created");
-            
-            // Simple die creation function
+
+            // Create die with improved visual appearance
             function createDie(type) {
-                if (DEBUG) console.log(`Creating die of type ${type}`);
-                
                 const geometry = geometries[type];
                 const color = diceColors[type];
                 
-                // Create material with some shine
+                // Create glossy material
                 const material = new THREE.MeshStandardMaterial({
                     color: color,
                     metalness: 0.3,
-                    roughness: 0.4
+                    roughness: 0.2
                 });
                 
-                // Create the die mesh
+                // Create the die
                 const die = new THREE.Mesh(geometry, material);
                 
-                // Add edge highlighting
-                const edges = new THREE.EdgesGeometry(geometry);
-                const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-                const wireframe = new THREE.LineSegments(edges, edgeMaterial);
+                // Add wireframe for edge highlighting
+                const wireframeGeometry = new THREE.EdgesGeometry(geometry);
+                const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+                const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
                 die.add(wireframe);
                 
-                // Set initial position slightly above the floor
-                die.position.y = 0;
+                // Set random rotation
+                die.rotation.set(
+                    Math.random() * Math.PI * 2,
+                    Math.random() * Math.PI * 2,
+                    Math.random() * Math.PI * 2
+                );
                 
-                // Store die properties
+                // Add metadata to the die
                 die.userData = {
                     type: type,
                     result: 0,
-                    isRolling: false,
                     velocity: new THREE.Vector3(0, 0, 0),
-                    angularVelocity: new THREE.Vector3(0, 0, 0)
+                    angularVelocity: new THREE.Vector3(0, 0, 0),
+                    isRolling: false
                 };
                 
-                if (DEBUG) console.log(`Die of type ${type} created successfully`);
                 return die;
             }
-            
-            // Add die to scene
+
+            // Dice addition and removal
             function addDie(type) {
-                try {
-                    if (diceCounts[type] >= 10) return; // Maximum 10 dice per type
-                    
-                    const die = createDie(type);
-                    scene.add(die);
-                    dice.push(die);
+                if (diceCounts[type] < 10) {
                     diceCounts[type]++;
-                    
-                    // Position dice in a grid or circle
+                    const die = createDie(type);
+                    dice.push(die);
+                    scene.add(die);
                     positionDice();
-                    
-                    // Update counter display
                     updateControls();
-                    
-                    if (DEBUG) console.log(`Added die type ${type}, new count: ${diceCounts[type]}`);
-                    return die;
-                } catch (error) {
-                    console.error(`Error adding die type ${type}:`, error);
                 }
             }
-            
-            // Remove die from scene
+
             function removeDie(type) {
-                if (diceCounts[type] <= 0) return;
-                
-                // Find a die of the specified type
-                const index = dice.findIndex(die => die.userData.type === type);
-                if (index === -1) return;
-                
-                // Remove the die
-                scene.remove(dice[index]);
-                dice.splice(index, 1);
-                diceCounts[type]--;
-                
-                // Reposition remaining dice
-                positionDice();
-                
-                // Update counter display
-                updateControls();
-                
-                if (DEBUG) console.log(`Removed die type ${type}, new count: ${diceCounts[type]}`);
+                if (diceCounts[type] > 0) {
+                    diceCounts[type]--;
+                    const index = dice.findIndex(d => d.userData.type === type);
+                    if (index !== -1) {
+                        scene.remove(dice[index]);
+                        dice.splice(index, 1);
+                        positionDice();
+                        updateControls();
+                    }
+                }
             }
-            
+
             // Position dice in scene
             function positionDice() {
-                const count = dice.length;
-                if (count === 0) return;
+                if (dice.length === 0) return;
                 
-                // Arrange in a grid
-                const spacing = 2.0;
-                const rowSize = Math.ceil(Math.sqrt(count));
-                const startX = -((rowSize - 1) * spacing) / 2;
-                const startZ = -((rowSize - 1) * spacing) / 2;
+                const spacing = 2.2;
+                const rows = Math.ceil(Math.sqrt(dice.length));
+                const cols = Math.ceil(dice.length / rows);
+                const offsetX = ((cols - 1) * spacing) / 2;
+                const offsetZ = ((rows - 1) * spacing) / 2;
                 
                 dice.forEach((die, index) => {
-                    const row = Math.floor(index / rowSize);
-                    const col = index % rowSize;
+                    const row = Math.floor(index / cols);
+                    const col = index % cols;
+                    die.position.set(
+                        col * spacing - offsetX,
+                        0.6 + Math.random() * 0.2,
+                        row * spacing - offsetZ
+                    );
                     
-                    die.position.x = startX + col * spacing;
-                    die.position.z = startZ + row * spacing;
-                    die.position.y = 0.5; // Slightly above the floor
+                    // Add slight scale variation
+                    const scale = 0.9 + Math.random() * 0.2;
+                    die.scale.set(scale, scale, scale);
                     
                     // Random rotation
                     die.rotation.set(
@@ -603,11 +357,9 @@
                         Math.random() * Math.PI * 2
                     );
                 });
-                
-                if (DEBUG) console.log(`Repositioned ${count} dice in scene`);
             }
-            
-            // Update control displays
+
+            // Update counter displays
             function updateControls() {
                 diceTypes.forEach(type => {
                     const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
@@ -616,94 +368,86 @@
                     }
                 });
             }
-            
-            // Roll physics with more control and dice reset
+
+            // Roll the dice
             function rollDice() {
                 if (dice.length === 0) return;
                 
                 const rollButton = document.getElementById('roll-button');
                 rollButton.disabled = true;
-                rollButton.textContent = "Rolling...";
                 
-                // RESET POSITIONS: Position dice in a neat grid for initial throw
-                positionDiceForRoll();
+                // Reset positions for roll
+                prepareDiceForRoll();
                 
-                // Generate random results for each die
+                // Roll each die
                 dice.forEach(die => {
-                    const type = die.userData.type;
-                    const faces = parseInt(type.slice(1));
-                    die.userData.result = Math.floor(Math.random() * faces) + 1;
                     die.userData.isRolling = true;
+                    die.userData.result = Math.floor(Math.random() * parseInt(die.userData.type.slice(1))) + 1;
                     
-                    // Set initial throw velocity with moderate force but high spin
+                    // Set initial velocity and spin
                     die.userData.velocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 3,     // Less horizontal force
-                        Math.random() * 4 + 3,         // Moderate vertical force
-                        (Math.random() - 0.5) * 3      // Less horizontal force
+                        (Math.random() - 0.5) * 3,
+                        Math.random() * 5 + 3,
+                        (Math.random() - 0.5) * 3
                     );
                     
-                    // MUCH more angular velocity for spinning
                     die.userData.angularVelocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 30,    // 3x more rotation
-                        (Math.random() - 0.5) * 30,    // 3x more rotation
-                        (Math.random() - 0.5) * 30     // 3x more rotation
+                        (Math.random() - 0.5) * 15,
+                        (Math.random() - 0.5) * 15,
+                        (Math.random() - 0.5) * 15
                     );
                 });
                 
-                // Roll for 3 seconds then display results
+                // Roll for 2.5 seconds
                 setTimeout(() => {
                     dice.forEach(die => {
                         die.userData.isRolling = false;
                     });
                     displayResults();
                     rollButton.disabled = false;
-                    rollButton.textContent = "Roll Dice";
-                }, 3000);
+                }, 2500);
             }
             
-            // Position dice neatly for rolling with better spacing
-            function positionDiceForRoll() {
-                const count = dice.length;
-                if (count === 0) return;
+            // Prepare dice positions for roll
+            function prepareDiceForRoll() {
+                if (dice.length === 0) return;
                 
-                // Use a wider spacing to prevent dice from landing on each other
-                const spacing = 2.5; // Increased from 1.5 to 2.5
-                const rowSize = Math.ceil(Math.sqrt(count));
-                const startX = -((rowSize - 1) * spacing) / 2;
-                const startZ = -((rowSize - 1) * spacing) / 2;
+                const spacing = 2.5;
+                const rows = Math.ceil(Math.sqrt(dice.length));
+                const cols = Math.ceil(dice.length / rows);
+                const offsetX = ((cols - 1) * spacing) / 2;
+                const offsetZ = ((rows - 1) * spacing) / 2;
                 
                 dice.forEach((die, index) => {
-                    const row = Math.floor(index / rowSize);
-                    const col = index % rowSize;
+                    const row = Math.floor(index / cols);
+                    const col = index % cols;
                     
-                    // Position above the surface for a drop with slight randomization
-                    die.position.x = startX + col * spacing + (Math.random() * 0.4 - 0.2);
-                    die.position.z = startZ + row * spacing + (Math.random() * 0.4 - 0.2);
-                    die.position.y = 3.0 + (Math.random() * 0.5); // Varied starting height
+                    // Position each die at a different height
+                    die.position.set(
+                        col * spacing - offsetX + (Math.random() * 0.5 - 0.25),
+                        3 + Math.random(),
+                        row * spacing - offsetZ + (Math.random() * 0.5 - 0.25)
+                    );
                     
-                    // Random initial rotation
+                    // Store original position for collision prevention
+                    die.userData.initialX = die.position.x;
+                    die.userData.initialZ = die.position.z;
+                    
+                    // Reset rotation
                     die.rotation.set(
                         Math.random() * Math.PI * 2,
                         Math.random() * Math.PI * 2,
                         Math.random() * Math.PI * 2
                     );
-                    
-                    // Add slight scale variation
-                    const scale = 0.95 + Math.random() * 0.1; // Less variation, all slightly smaller
-                    die.scale.set(scale, scale, scale);
-                    
-                    // Store original position for physics calculations
-                    die.userData.initialX = die.position.x;
-                    die.userData.initialZ = die.position.z;
                 });
             }
-            
-            // Update dice physics during rolling - prevent dice from stacking
+
+            // Update dice physics
             function updateDicePhysics(delta) {
                 const gravity = new THREE.Vector3(0, -9.8, 0);
                 const floorY = -0.5;
                 
-                // First update positions and rotations
+                // First update positions 
                 dice.forEach(die => {
                     if (!die.userData.isRolling) return;
                     
@@ -719,135 +463,128 @@
                     die.userData.velocity.addScaledVector(gravity, delta);
                     
                     // Air resistance
-                    die.userData.velocity.multiplyScalar(0.97);
-                    die.userData.angularVelocity.multiplyScalar(0.99);
+                    die.userData.velocity.multiplyScalar(0.98);
+                    die.userData.angularVelocity.multiplyScalar(0.98);
                     
                     // Floor collision
-                    const dieSize = 0.75;
-                    if (die.position.y - dieSize < floorY) {
-                        die.position.y = floorY + dieSize;
+                    const dieRadius = 0.8;
+                    if (die.position.y - dieRadius < floorY) {
+                        die.position.y = floorY + dieRadius;
                         die.userData.velocity.y *= -0.5;
                         
+                        // Minimum bounce for visual interest
                         if (Math.abs(die.userData.velocity.y) < 1.0 && Math.abs(die.userData.velocity.y) > 0.1) {
                             die.userData.velocity.y = Math.sign(die.userData.velocity.y) * 1.0;
                         }
                         
-                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 8;
-                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 8;
+                        // Add spin when hitting floor
+                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
+                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
                         
+                        // Friction
                         die.userData.velocity.x *= 0.8;
                         die.userData.velocity.z *= 0.8;
                     }
                     
                     // Wall collisions
-                    const bounds = 10;
-                    if (Math.abs(die.position.x) > bounds) {
-                        die.position.x = Math.sign(die.position.x) * bounds;
-                        die.userData.velocity.x *= -0.7;
+                    const wallRadius = 9.5;
+                    const dist = Math.sqrt(die.position.x * die.position.x + die.position.z * die.position.z);
+                    if (dist > wallRadius) {
+                        // Normalize to get direction vector
+                        const nx = die.position.x / dist;
+                        const nz = die.position.z / dist;
+                        
+                        // Set position at boundary
+                        die.position.x = nx * wallRadius;
+                        die.position.z = nz * wallRadius;
+                        
+                        // Reflect velocity
+                        const dot = die.userData.velocity.x * nx + die.userData.velocity.z * nz;
+                        die.userData.velocity.x -= 2 * dot * nx * 0.8;
+                        die.userData.velocity.z -= 2 * dot * nz * 0.8;
+                        
+                        // Add upward velocity for bounce
                         die.userData.velocity.y += 1.0;
-                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 15;
-                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 15;
-                    }
-                    if (Math.abs(die.position.z) > bounds) {
-                        die.position.z = Math.sign(die.position.z) * bounds;
-                        die.userData.velocity.z *= -0.7;
-                        die.userData.velocity.y += 1.0;
-                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 15;
-                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 15;
+                        
+                        // Add random spin
+                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
+                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
                     }
                 });
                 
-                // Now check for collisions between dice
+                // Then check for dice collisions
                 for (let i = 0; i < dice.length; i++) {
-                    const dieA = dice[i];
-                    if (!dieA.userData.isRolling) continue;
-                    
-                    // Apply a gentle force to push dice back toward their initial position
-                    // This helps prevent them from all clumping in the center
-                    if (dieA.userData.initialX !== undefined && dieA.userData.initialZ !== undefined) {
-                        const homingForce = 0.05;
-                        const diffX = dieA.userData.initialX - dieA.position.x;
-                        const diffZ = dieA.userData.initialZ - dieA.position.z;
-                        
-                        // Only apply if the die is more than 2 units away from its initial position
-                        if (Math.abs(diffX) > 2) {
-                            dieA.userData.velocity.x += diffX * homingForce * delta;
-                        }
-                        if (Math.abs(diffZ) > 2) {
-                            dieA.userData.velocity.z += diffZ * homingForce * delta;
-                        }
-                    }
+                    if (!dice[i].userData.isRolling) continue;
                     
                     for (let j = i + 1; j < dice.length; j++) {
-                        const dieB = dice[j];
-                        if (!dieB.userData.isRolling) continue;
+                        if (!dice[j].userData.isRolling) continue;
                         
-                        // Calculate distance between dice centers
-                        const dx = dieB.position.x - dieA.position.x;
-                        const dy = dieB.position.y - dieA.position.y;
-                        const dz = dieB.position.z - dieA.position.z;
-                        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                        const die1 = dice[i];
+                        const die2 = dice[j];
                         
-                        // Check if dice are colliding (assuming each die has radius ~1.0)
-                        const minDistance = 1.6; // Minimum distance before collision
-                        if (distance < minDistance) {
-                            // Calculate collision normal
+                        // Calculate distance between dice
+                        const dx = die2.position.x - die1.position.x;
+                        const dy = die2.position.y - die1.position.y;
+                        const dz = die2.position.z - die1.position.z;
+                        const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                        
+                        // Check for collision
+                        const minDist = 1.8;
+                        if (distance < minDist) {
+                            // Normalized direction
                             const nx = dx / distance;
                             const ny = dy / distance;
                             const nz = dz / distance;
                             
-                            // Calculate separation needed
-                            const separation = minDistance - distance;
+                            // Move dice apart
+                            const moveAmount = (minDist - distance) / 2;
+                            die1.position.x -= nx * moveAmount;
+                            die1.position.y -= ny * moveAmount;
+                            die1.position.z -= nz * moveAmount;
                             
-                            // Push dice apart
-                            dieA.position.x -= nx * separation * 0.5;
-                            dieA.position.y -= ny * separation * 0.5;
-                            dieA.position.z -= nz * separation * 0.5;
-                            
-                            dieB.position.x += nx * separation * 0.5;
-                            dieB.position.y += ny * separation * 0.5;
-                            dieB.position.z += nz * separation * 0.5;
+                            die2.position.x += nx * moveAmount;
+                            die2.position.y += ny * moveAmount;
+                            die2.position.z += nz * moveAmount;
                             
                             // Exchange momentum
-                            const elasticity = 0.7; // Bounciness
+                            const dot1 = die1.userData.velocity.x * nx + 
+                                       die1.userData.velocity.y * ny + 
+                                       die1.userData.velocity.z * nz;
+                                       
+                            const dot2 = die2.userData.velocity.x * nx + 
+                                       die2.userData.velocity.y * ny + 
+                                       die2.userData.velocity.z * nz;
                             
-                            // Project velocity onto collision normal
-                            const v1n = dieA.userData.velocity.x * nx + 
-                                      dieA.userData.velocity.y * ny + 
-                                      dieA.userData.velocity.z * nz;
-                            
-                            const v2n = dieB.userData.velocity.x * nx + 
-                                      dieB.userData.velocity.y * ny + 
-                                      dieB.userData.velocity.z * nz;
+                            // Bounce coefficient
+                            const bounce = 0.7;
                             
                             // Update velocities
-                            dieA.userData.velocity.x += elasticity * nx * (v2n - v1n);
-                            dieA.userData.velocity.y += elasticity * ny * (v2n - v1n);
-                            dieA.userData.velocity.z += elasticity * nz * (v2n - v1n);
+                            die1.userData.velocity.x += (dot2 - dot1) * nx * bounce;
+                            die1.userData.velocity.y += (dot2 - dot1) * ny * bounce;
+                            die1.userData.velocity.z += (dot2 - dot1) * nz * bounce;
                             
-                            dieB.userData.velocity.x += elasticity * nx * (v1n - v2n);
-                            dieB.userData.velocity.y += elasticity * ny * (v1n - v2n);
-                            dieB.userData.velocity.z += elasticity * nz * (v1n - v2n);
+                            die2.userData.velocity.x += (dot1 - dot2) * nx * bounce;
+                            die2.userData.velocity.y += (dot1 - dot2) * ny * bounce;
+                            die2.userData.velocity.z += (dot1 - dot2) * nz * bounce;
                             
-                            // Add some random angular velocity on collision
-                            const angularImpulse = 5.0;
-                            dieA.userData.angularVelocity.x += (Math.random() - 0.5) * angularImpulse;
-                            dieA.userData.angularVelocity.y += (Math.random() - 0.5) * angularImpulse;
-                            dieA.userData.angularVelocity.z += (Math.random() - 0.5) * angularImpulse;
+                            // Add random spin on collision
+                            const spinAmount = 5.0;
+                            die1.userData.angularVelocity.x += (Math.random() - 0.5) * spinAmount;
+                            die1.userData.angularVelocity.y += (Math.random() - 0.5) * spinAmount;
+                            die1.userData.angularVelocity.z += (Math.random() - 0.5) * spinAmount;
                             
-                            dieB.userData.angularVelocity.x += (Math.random() - 0.5) * angularImpulse;
-                            dieB.userData.angularVelocity.y += (Math.random() - 0.5) * angularImpulse;
-                            dieB.userData.angularVelocity.z += (Math.random() - 0.5) * angularImpulse;
+                            die2.userData.angularVelocity.x += (Math.random() - 0.5) * spinAmount;
+                            die2.userData.angularVelocity.y += (Math.random() - 0.5) * spinAmount;
+                            die2.userData.angularVelocity.z += (Math.random() - 0.5) * spinAmount;
                         }
                     }
                 }
             }
-            
-            // Display roll results - simplified format matching original
+
+            // Display results
             function displayResults() {
                 const rollLog = document.getElementById('roll-log');
-                
-                // Group results by die type
                 const resultsByType = {};
                 let totalSum = 0;
                 
@@ -863,89 +600,25 @@
                     totalSum += result;
                 });
                 
-                // Create formatted results HTML matching original format
-                let resultHTML = '';
-                
-                // Get the types in order from lowest to highest die
-                const orderedTypes = Object.keys(resultsByType).sort((a, b) => {
-                    return parseInt(a.slice(1)) - parseInt(b.slice(1));
-                });
-                
                 // Format like original D20: [13, 13] style
-                for (const type of orderedTypes) {
+                let resultHTML = '';
+                for (const type in resultsByType) {
                     if (resultsByType[type].length > 0) {
                         resultHTML += `<span class="${type}-result">${type.toUpperCase()}: [${resultsByType[type].join(', ')}]</span> `;
                     }
                 }
                 
-                // Add total in original style
                 resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
                 
-                // Add to log
                 const logEntry = document.createElement('li');
                 logEntry.innerHTML = resultHTML;
                 rollLog.insertBefore(logEntry, rollLog.firstChild);
                 
-                // Keep only last 10 rolls
                 while (rollLog.children.length > 10) {
                     rollLog.removeChild(rollLog.lastChild);
                 }
             }
-            
-            // Simple star field
-            function addSimpleStarfield(scene) {
-                const starCount = 1000;
-                const starGeometry = new THREE.BufferGeometry();
-                const starPositions = new Float32Array(starCount * 3);
-                
-                for (let i = 0; i < starCount * 3; i += 3) {
-                    // Position stars in a large sphere
-                    const r = 50;
-                    const theta = Math.random() * Math.PI * 2;
-                    const phi = Math.acos(2 * Math.random() - 1);
-                    
-                    starPositions[i] = r * Math.sin(phi) * Math.cos(theta);
-                    starPositions[i+1] = r * Math.sin(phi) * Math.sin(theta);
-                    starPositions[i+2] = r * Math.cos(phi);
-                }
-                
-                starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-                
-                const starMaterial = new THREE.PointsMaterial({
-                    size: 0.5,
-                    color: 0xffffff
-                });
-                
-                const starField = new THREE.Points(starGeometry, starMaterial);
-                scene.add(starField);
-                
-                if (DEBUG) console.log("Starfield added to scene");
-            }
-            
-            // Animation loop
-            let lastTime = 0;
-            
-            function animate(time) {
-                requestAnimationFrame(animate);
-                
-                // Calculate delta time for physics
-                const delta = Math.min((time - lastTime) / 1000, 0.1); // Cap at 0.1 seconds
-                lastTime = time;
-                
-                // Update physics
-                updateDicePhysics(delta);
-                
-                // Render
-                renderer.render(scene, camera);
-            }
-            
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                camera.aspect = container.clientWidth / container.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(container.clientWidth, container.clientHeight);
-            });
-            
+
             // Add control listeners
             document.querySelectorAll('.dice-control .add').forEach(button => {
                 button.addEventListener('click', function() {
@@ -953,757 +626,46 @@
                     addDie(type);
                 });
             });
-            
+
             document.querySelectorAll('.dice-control .remove').forEach(button => {
                 button.addEventListener('click', function() {
                     const type = this.parentElement.dataset.type;
                     removeDie(type);
                 });
             });
-            
+
             // Roll button
             document.getElementById('roll-button').addEventListener('click', rollDice);
-            
-            // Initialize with some dice
-            function addStarterDice() {
-                if (DEBUG) console.log("Adding starter dice");
+
+            // Animation loop
+            let lastTime = 0;
+            function animate(time) {
+                requestAnimationFrame(animate);
                 
-                // Add one of each type of die
-                diceTypes.forEach(type => {
-                    addDie(type);
-                });
+                const delta = Math.min((time - lastTime) / 1000, 0.1);
+                lastTime = time;
+                
+                updateDicePhysics(delta);
+                renderer.render(scene, camera);
             }
-            
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
             // Start animation
             animate(0);
             
-            // Add starter dice after a short delay
-            setTimeout(addStarterDice, 100);
-            
-            if (DEBUG) console.log("Dice roller initialization complete");
-            } catch (error) {
-                // Catch any errors to prevent them showing on page
-                console.error("Error initializing dice roller:", error);
-                
-                // Show user-friendly error message
-                const container = document.getElementById('canvas-container');
-                if (container) {
-                    container.innerHTML = '<div style="color: white; text-align: center; padding: 20px;">An error occurred while initializing the dice roller. Please refresh the page to try again.</div>';
-                }
-            }
-            
-            // Add event listener to hide any error messages that might appear
-            window.addEventListener('error', function(e) {
-                e.preventDefault();
-                return true; // Prevent default error handling
-            }, true);
-        }
-    </script>
-
-            // Scene setup - modified for better view
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000000); // Pure black background
-            
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth * 0.9 / (window.innerHeight * 0.5), 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
-            const container = document.getElementById('canvas-container');
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            container.appendChild(renderer.domElement);
-
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            
-            const pointLight = new THREE.PointLight(0xffffff, 0.8);
-            pointLight.position.set(10, 10, 10);
-            scene.add(pointLight);
-            
-            const pointLight2 = new THREE.PointLight(0xffffff, 0.5);
-            pointLight2.position.set(-10, -5, 8);
-            scene.add(pointLight2);
-
-            // Camera position - closer to see dice better
-            camera.position.z = 7;
-            camera.position.y = 2;
-
-            // Add a space-themed environment with stars
-            function createStarfield() {
-                // Create starfield points
-                const starCount = 3000;
-                const geometry = new THREE.BufferGeometry();
-                const positions = new Float32Array(starCount * 3);
-                const sizes = new Float32Array(starCount);
-                const colors = new Float32Array(starCount * 3);
-                
-                for (let i = 0; i < starCount; i++) {
-                    // Position stars in a large sphere around the scene
-                    const radius = 40 + Math.random() * 10;
-                    const theta = Math.random() * Math.PI * 2;
-                    const phi = Math.acos(2 * Math.random() - 1);
-                    
-                    positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-                    positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-                    positions[i * 3 + 2] = radius * Math.cos(phi);
-                    
-                    // Random star sizes
-                    sizes[i] = Math.random() * 2 + 0.5;
-                    
-                    // Random star colors (mostly white with some color variation)
-                    const starColor = Math.random();
-                    if (starColor > 0.9) {
-                        // Bluish stars
-                        colors[i * 3] = 0.7 + Math.random() * 0.3;
-                        colors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
-                        colors[i * 3 + 2] = 1.0;
-                    } else if (starColor > 0.8) {
-                        // Reddish stars
-                        colors[i * 3] = 1.0;
-                        colors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
-                        colors[i * 3 + 2] = 0.7 + Math.random() * 0.3;
-                    } else {
-                        // White stars
-                        colors[i * 3] = 1.0;
-                        colors[i * 3 + 1] = 1.0;
-                        colors[i * 3 + 2] = 1.0;
-                    }
-                }
-                
-                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-                
-                const starsMaterial = new THREE.PointsMaterial({
-                    size: 0.8,
-                    sizeAttenuation: true,
-                    vertexColors: true,
-                    transparent: true,
-                    opacity: 0.8
-                });
-                
-                const stars = new THREE.Points(geometry, starsMaterial);
-                scene.add(stars);
-                
-                // Add a few bright "hero" stars
-                const bigStarCount = 50;
-                const bigStarGeometry = new THREE.BufferGeometry();
-                const bigStarPositions = new Float32Array(bigStarCount * 3);
-                const bigStarSizes = new Float32Array(bigStarCount);
-                
-                for (let i = 0; i < bigStarCount; i++) {
-                    const radius = 38 + Math.random() * 10;
-                    const theta = Math.random() * Math.PI * 2;
-                    const phi = Math.acos(2 * Math.random() - 1);
-                    
-                    bigStarPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-                    bigStarPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-                    bigStarPositions[i * 3 + 2] = radius * Math.cos(phi);
-                    
-                    bigStarSizes[i] = Math.random() * 3 + 2;
-                }
-                
-                bigStarGeometry.setAttribute('position', new THREE.BufferAttribute(bigStarPositions, 3));
-                bigStarGeometry.setAttribute('size', new THREE.BufferAttribute(bigStarSizes, 1));
-                
-                const bigStarsMaterial = new THREE.PointsMaterial({
-                    color: 0xffffff,
-                    size: 2,
-                    sizeAttenuation: true,
-                    transparent: true,
-                    opacity: 0.9
-                });
-                
-                const bigStars = new THREE.Points(bigStarGeometry, bigStarsMaterial);
-                scene.add(bigStars);
-            }
-            
-            // Create starfield
-            createStarfield();
-
-            // Add a black table surface
-            const tableGeometry = new THREE.PlaneGeometry(30, 30);
-            const tableMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x000000, 
-                roughness: 0.9,  // Very high roughness (less reflective)
-                metalness: 0.0   // No metallic quality
-            });
-            const table = new THREE.Mesh(tableGeometry, tableMaterial);
-            table.rotation.x = -Math.PI / 2;
-            table.position.y = 0;
-            scene.add(table);
-            
-            // Add subtle edge glow to the table
-            const tableEdgeGeometry = new THREE.RingGeometry(14.8, 15, 64);
-            const tableEdgeMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0x0066ff, 
-                transparent: true,
-                opacity: 0.3,
-                side: THREE.DoubleSide
-            });
-            const tableEdge = new THREE.Mesh(tableEdgeGeometry, tableEdgeMaterial);
-            tableEdge.rotation.x = -Math.PI / 2;
-            tableEdge.position.y = 0.01;
-            scene.add(tableEdge);
-
-            // Initialize dice management
-            const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
-            const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
-            const dice = [];
-
-            // Face configurations for proper orientation
-            // This defines which face should point up for each result
-            const faceConfigurations = {
-                d4: [
-                    { result: 1, up: new THREE.Vector3(0, 1, 0), rotation: new THREE.Euler(0, 0, 0) },
-                    { result: 2, up: new THREE.Vector3(1, 0, 0), rotation: new THREE.Euler(0, 0, Math.PI/2) },
-                    { result: 3, up: new THREE.Vector3(0, 0, 1), rotation: new THREE.Euler(Math.PI/2, 0, 0) },
-                    { result: 4, up: new THREE.Vector3(-1, -1, -1).normalize(), rotation: new THREE.Euler(Math.PI, 0, 0) }
-                ],
-                d6: [
-                    { result: 1, up: new THREE.Vector3(0, 1, 0), rotation: new THREE.Euler(0, 0, 0) },
-                    { result: 2, up: new THREE.Vector3(1, 0, 0), rotation: new THREE.Euler(0, 0, Math.PI/2) },
-                    { result: 3, up: new THREE.Vector3(0, 0, 1), rotation: new THREE.Euler(Math.PI/2, 0, 0) },
-                    { result: 4, up: new THREE.Vector3(0, 0, -1), rotation: new THREE.Euler(-Math.PI/2, 0, 0) },
-                    { result: 5, up: new THREE.Vector3(-1, 0, 0), rotation: new THREE.Euler(0, 0, -Math.PI/2) },
-                    { result: 6, up: new THREE.Vector3(0, -1, 0), rotation: new THREE.Euler(Math.PI, 0, 0) }
-                ],
-                d8: Array.from({ length: 8 }, (_, i) => ({ 
-                    result: i + 1, 
-                    up: new THREE.Vector3(
-                        i % 2 === 0 ? 1 : -1, 
-                        i % 4 < 2 ? 1 : -1, 
-                        i < 4 ? 1 : -1
-                    ).normalize(),
-                    rotation: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
-                })),
-                d10: Array.from({ length: 10 }, (_, i) => ({ 
-                    result: i + 1, 
-                    up: new THREE.Vector3(
-                        Math.cos(i * Math.PI/5) * Math.sin(Math.PI/3),
-                        Math.cos(Math.PI/3),
-                        Math.sin(i * Math.PI/5) * Math.sin(Math.PI/3)
-                    ),
-                    rotation: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
-                })),
-                d12: Array.from({ length: 12 }, (_, i) => ({ 
-                    result: i + 1, 
-                    up: new THREE.Vector3(
-                        Math.cos(i * Math.PI/6) * Math.sin(Math.PI/5),
-                        Math.cos(Math.PI/5),
-                        Math.sin(i * Math.PI/6) * Math.sin(Math.PI/5)
-                    ),
-                    rotation: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
-                })),
-                d20: Array.from({ length: 20 }, (_, i) => ({ 
-                    result: i + 1, 
-                    up: new THREE.Vector3(
-                        Math.cos(i * Math.PI/10) * Math.sin(Math.PI/4),
-                        Math.cos(Math.PI/4),
-                        Math.sin(i * Math.PI/10) * Math.sin(Math.PI/4)
-                    ),
-                    rotation: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
-                }))
-            };
-
-            // Geometries for each dice type
-            const geometries = {
-                d4: new THREE.TetrahedronGeometry(1),
-                d6: new THREE.BoxGeometry(1, 1, 1),
-                d8: new THREE.OctahedronGeometry(1),
-                d10: new THREE.ConeGeometry(0.8, 1.2, 10), // Better approximation for D10
-                d12: new THREE.DodecahedronGeometry(1),
-                d20: new THREE.IcosahedronGeometry(1)
-            };
-
-            // Create number texture for dice faces
-            function createNumberTexture(number, color) {
-                const canvas = document.createElement('canvas');
-                canvas.width = 128;
-                canvas.height = 128;
-                const ctx = canvas.getContext('2d');
-                
-                // Clear background with slight transparency
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.fillRect(0, 0, 128, 128);
-                
-                // Draw number
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 80px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(number.toString(), 64, 64);
-                
-                // Add subtle border
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 4;
-                ctx.strokeRect(5, 5, 118, 118);
-                
-                return new THREE.CanvasTexture(canvas);
-            }
-
-            // Create a die with solid colors and glossy appearance (no numbers)
-            function createDie(type) {
-                const geometry = geometries[type];
-                const diceColor = diceColors[type];
-                
-                // Create more vibrant glossy material
-                const material = new THREE.MeshStandardMaterial({ 
-                    color: diceColor,
-                    metalness: 0.5,
-                    roughness: 0.1,
-                    envMapIntensity: 1.5,
-                    flatShading: false
-                });
-                
-                // Add edge highlighting with a second material
-                const edges = new THREE.EdgesGeometry(geometry);
-                const edgeMaterial = new THREE.LineBasicMaterial({ 
-                    color: 0xffffff,
-                    linewidth: 1
-                });
-                const wireframe = new THREE.LineSegments(edges, edgeMaterial);
-                
-                // Create the main die
-                const die = new THREE.Mesh(geometry, material);
-                die.add(wireframe);
-                
-                // Get number of faces from dice type
-                const faces = parseInt(type.slice(1));
-                
-                // Store physics properties
-                die.userData = {
-                    type: type,
-                    rollingSpeed: new THREE.Vector3(0, 0, 0),
-                    angularVelocity: new THREE.Vector3(0, 0, 0),
-                    isRolling: false,
-                    rollResult: 0,
-                    faces: faces
-                };
-                
-                return die;
-            }
-
-                // Store physics properties
-                die.userData = {
-                    type: type,
-                    rollingSpeed: new THREE.Vector3(0, 0, 0),
-                    angularVelocity: new THREE.Vector3(0, 0, 0),
-                    isRolling: false,
-                    rollResult: 0,
-                    faces: faces
-                };
-                
-                return die;
-            }
-
-            // Add a die to the scene - fixed implementation
-            function addDie(type) {
-                if (diceCounts[type] < 10) {
-                    diceCounts[type]++;
-                    try {
-                        const die = createDie(type);
-                        dice.push(die);
-                        scene.add(die);
-                        console.log(`Added ${type} die. Total: ${diceCounts[type]}`);
-                        positionDice();
-                        updateControls();
-                    } catch (error) {
-                        console.error(`Error adding ${type} die:`, error);
-                        diceCounts[type]--; // Revert the count increase
-                    }
-                }
-            }
-
-            // Remove a die from the scene - fixed implementation
-            function removeDie(type) {
-                if (diceCounts[type] > 0) {
-                    diceCounts[type]--;
-                    try {
-                        // Find dice of the specified type
-                        const index = dice.findIndex(d => d.userData.type === type);
-                        if (index !== -1) {
-                            scene.remove(dice[index]);
-                            dice.splice(index, 1);
-                            console.log(`Removed ${type} die. Remaining: ${diceCounts[type]}`);
-                            positionDice();
-                            updateControls();
-                        }
-                    } catch (error) {
-                        console.error(`Error removing ${type} die:`, error);
-                        diceCounts[type]++; // Revert the count decrease
-                    }
-                }
-            }
-
-            // Position dice in the scene - closer spacing and better initial position
-            function positionDice() {
-                const totalDice = dice.length;
-                if (totalDice === 0) return;
-                
-                // Arrange in a more compact grid
-                if (totalDice <= 25) {
-                    const gridSize = Math.ceil(Math.sqrt(totalDice));
-                    const spacing = 1.8; // Closer spacing
-                    const offset = (gridSize - 1) * spacing / 2;
-                    
-                    dice.forEach((die, index) => {
-                        const row = Math.floor(index / gridSize);
-                        const col = index % gridSize;
-                        die.position.set(
-                            col * spacing - offset,
-                            0.5, // Slightly elevated for better visibility
-                            row * spacing - offset
-                        );
-                        
-                        // Random initial orientation
-                        die.rotation.set(
-                            Math.random() * Math.PI * 2,
-                            Math.random() * Math.PI * 2,
-                            Math.random() * Math.PI * 2
-                        );
-                        
-                        // Add slight scale variation for visual interest
-                        const scale = 0.85 + Math.random() * 0.3;
-                        die.scale.set(scale, scale, scale);
-                    });
-                } else {
-                    // Fallback to circular arrangement for many dice
-                    const radius = Math.min(totalDice * 0.3, 4);
-                    dice.forEach((die, index) => {
-                        const angle = (index / totalDice) * Math.PI * 2;
-                        die.position.set(
-                            Math.cos(angle) * radius,
-                            0.5,
-                            Math.sin(angle) * radius
-                        );
-                    });
-                }
-            }
-                if (totalDice === 0) return;
-                
-                // Arrange in a more compact grid
-                if (totalDice <= 25) {
-                    const gridSize = Math.ceil(Math.sqrt(totalDice));
-                    const spacing = 1.8; // Closer spacing
-                    const offset = (gridSize - 1) * spacing / 2;
-                    
-                    dice.forEach((die, index) => {
-                        const row = Math.floor(index / gridSize);
-                        const col = index % gridSize;
-                        die.position.set(
-                            col * spacing - offset,
-                            0.5, // Slightly elevated for better visibility
-                            row * spacing - offset
-                        );
-                        
-                        // Random initial orientation
-                        die.rotation.set(
-                            Math.random() * Math.PI * 2,
-                            Math.random() * Math.PI * 2,
-                            Math.random() * Math.PI * 2
-                        );
-                        
-                        // Add slight scale variation for visual interest
-                        const scale = 0.85 + Math.random() * 0.3;
-                        die.scale.set(scale, scale, scale);
-                    });
-                } else {
-                    // Fallback to circular arrangement for many dice
-                    const radius = Math.min(totalDice * 0.3, 4);
-                    dice.forEach((die, index) => {
-                        const angle = (index / totalDice) * Math.PI * 2;
-                        die.position.set(
-                            Math.cos(angle) * radius,
-                            0.5,
-                            Math.sin(angle) * radius
-                        );
-                    });
-                }
-            }
-
-            // Update control displays - made more robust
-            function updateControls() {
-                try {
-                    diceTypes.forEach(type => {
-                        const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
-                        if (control) {
-                            control.innerText = `${type.toUpperCase()}: ${diceCounts[type]}`;
-                            control.style.visibility = 'visible'; // Ensure visibility
-                            control.style.display = 'inline'; // Ensure display
-                        }
-                    });
-                } catch (error) {
-                    console.error("Error updating controls:", error);
-                }
-            }
-
-            // Generate a random roll result
-            function rollDie(type) {
-                return Math.floor(Math.random() * parseInt(type.slice(1))) + 1;
-            }
-
-            // Set the die orientation based on the roll result
-            function setDieOrientation(die, result) {
-                const type = die.userData.type;
-                const faceConfig = faceConfigurations[type].find(f => f.result === result);
-                
-                if (faceConfig) {
-                    // Create a matrix to orient the die with the correct face up
-                    const targetQuaternion = new THREE.Quaternion().setFromEuler(faceConfig.rotation);
-                    die.quaternion.copy(targetQuaternion);
-                    
-                    // Add a slight random rotation around the up axis for variety
-                    const randomAngle = Math.random() * Math.PI * 2;
-                    const extraRotation = new THREE.Quaternion().setFromAxisAngle(faceConfig.up, randomAngle);
-                    die.quaternion.multiply(extraRotation);
-                    
-                    // Store the result
-                    die.userData.rollResult = result;
-                }
-            }
-
-            // Much more forceful roll animation with harder throws
-            function rollDice() {
-                if (dice.length === 0) return;
-                
-                const rollButton = document.getElementById('roll-button');
-                rollButton.disabled = true;
-                rollButton.textContent = "Rolling...";
-                
-                // Generate roll results before animation
-                const results = dice.map(die => {
-                    const result = rollDie(die.userData.type);
-                    die.userData.rollResult = result;
-                    return result;
-                });
-                
-                // Set initial physics for much more forceful roll
-                dice.forEach(die => {
-                    die.userData.isRolling = true;
-                    die.userData.rollTime = 0;
-                    
-                    // MUCH more forceful initial velocity
-                    die.userData.rollingSpeed = new THREE.Vector3(
-                        (Math.random() - 0.5) * 5.0, // Much stronger horizontal force
-                        Math.random() * 2.0 + 1.5,   // Higher initial toss
-                        (Math.random() - 0.5) * 5.0  // Much stronger horizontal force
-                    );
-                    
-                    // Much more energetic angular velocity for dramatic spins
-                    die.userData.angularVelocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 12.0, // Very fast rotation
-                        (Math.random() - 0.5) * 12.0,
-                        (Math.random() - 0.5) * 12.0
-                    );
-                    
-                    // Higher initial position for more dramatic drops
-                    die.position.y = 4 + Math.random() * 2;
-                    
-                    // Reset scale to normal
-                    die.scale.set(1, 1, 1);
-                });
-                
-                // Roll duration - longer for more dramatic animation
-                const rollDuration = 2500; // milliseconds
-                
-                // After animation completes, set the final orientation for the result
-                setTimeout(() => {
-                    dice.forEach(die => {
-                        const result = die.userData.rollResult;
-                        setDieOrientation(die, result);
-                        die.userData.isRolling = false;
-                        
-                        // Make the final position on the table
-                        die.position.y = 0.5;
-                    });
-                    
-                    displayResults();
-                    rollButton.disabled = false;
-                    rollButton.textContent = "Roll Dice";
-                }, rollDuration);
-            }
-
-            // Display roll results and log
-            function displayResults() {
-                const rollLog = document.getElementById('roll-log');
-                let resultHTML = '';
-                
-                // Group results by dice type
-                const resultsByType = {};
-                let totalSum = 0;
-                
-                dice.forEach(die => {
-                    const type = die.userData.type;
-                    const result = die.userData.rollResult;
-                    
-                    if (!resultsByType[type]) {
-                        resultsByType[type] = [];
-                    }
-                    
-                    resultsByType[type].push(result);
-                    totalSum += result;
-                });
-                
-                // Create formatted results
-                for (const type in resultsByType) {
-                    if (resultsByType[type].length > 0) {
-                        resultHTML += `<span class="${type}-result">${type.toUpperCase()}: [${resultsByType[type].join(', ')}]</span> `;
-                    }
-                }
-                
-                // Add total
-                resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
-                
-                // Create log entry
-                const logEntry = document.createElement('li');
-                logEntry.innerHTML = resultHTML;
-                rollLog.insertBefore(logEntry, rollLog.firstChild);
-                
-                // Keep only the last 8 rolls
-                while (rollLog.children.length > 8) {
-                    rollLog.removeChild(rollLog.lastChild);
-                }
-            }
-
-            // Enhanced physics update for more energetic and longer rolling
-            function updateDicePhysics(delta) {
-                const gravity = new THREE.Vector3(0, -12.0, 0); // Stronger gravity
-                const airResistance = 0.98; // Lower air resistance for longer rolls
-                const tableY = 0; // Height of the table surface
-                
-                dice.forEach(die => {
-                    if (die.userData.isRolling) {
-                        // Update position based on velocity
-                        die.position.add(die.userData.rollingSpeed.clone().multiplyScalar(delta));
-                        
-                        // Update rotation based on angular velocity
-                        die.rotation.x += die.userData.angularVelocity.x * delta;
-                        die.rotation.y += die.userData.angularVelocity.y * delta;
-                        die.rotation.z += die.userData.angularVelocity.z * delta;
-                        
-                        // Apply gravity to velocity
-                        die.userData.rollingSpeed.add(gravity.clone().multiplyScalar(delta));
-                        
-                        // Apply air resistance
-                        die.userData.rollingSpeed.multiplyScalar(airResistance);
-                        die.userData.angularVelocity.multiplyScalar(airResistance);
-                        
-                        // Handle collision with table - more energetic bounces
-                        if (die.position.y - 0.5 < tableY) {
-                            die.position.y = tableY + 0.5;
-                            
-                            // More energetic bounce - conserve more energy
-                            die.userData.rollingSpeed.y = Math.abs(die.userData.rollingSpeed.y) * 0.8;
-                            
-                            // Add a minimum bounce height for visual interest
-                            if (die.userData.rollingSpeed.y < 0.8 && die.userData.rollingSpeed.y > 0.1) {
-                                die.userData.rollingSpeed.y = 0.8;
-                            }
-                            
-                            // More dramatic rotation on bounce
-                            const bounceRotation = Math.random() * 1.2 + 0.5;
-                            die.userData.angularVelocity.x += (Math.random() - 0.5) * bounceRotation;
-                            die.userData.angularVelocity.z += (Math.random() - 0.5) * bounceRotation;
-                            
-                            // Less friction with table for longer, more dynamic rolls
-                            die.userData.rollingSpeed.x *= 0.95;
-                            die.userData.rollingSpeed.z *= 0.95;
-                        }
-                        
-                        // Boundary checks with more elastic collisions for dramatic bounces
-                        const boundary = 12; // Larger boundary
-                        if (Math.abs(die.position.x) > boundary) {
-                            die.position.x = Math.sign(die.position.x) * boundary;
-                            die.userData.rollingSpeed.x *= -0.9; // More elastic wall bounce
-                            
-                            // Add some random vertical bounce off walls
-                            die.userData.rollingSpeed.y += Math.random() * 1.0;
-                            
-                            // Add some random spin when hitting walls
-                            die.userData.angularVelocity.y += (Math.random() - 0.5) * 2.0;
-                            die.userData.angularVelocity.z += (Math.random() - 0.5) * 2.0;
-                        }
-                        if (Math.abs(die.position.z) > boundary) {
-                            die.position.z = Math.sign(die.position.z) * boundary;
-                            die.userData.rollingSpeed.z *= -0.9; // More elastic wall bounce
-                            
-                            // Add some random vertical bounce off walls
-                            die.userData.rollingSpeed.y += Math.random() * 1.0;
-                            
-                            // Add some random spin when hitting walls
-                            die.userData.angularVelocity.x += (Math.random() - 0.5) * 2.0;
-                            die.userData.angularVelocity.y += (Math.random() - 0.5) * 2.0;
-                        }
-                    }
-                });
-            }
-
-            // Add control button listeners - fixed implementation
-            document.querySelectorAll('.dice-control .add').forEach(button => {
-                button.addEventListener('click', function() {
-                    const type = this.parentElement.dataset.type;
-                    addDie(type);
-                });
-            });
-            
-            document.querySelectorAll('.dice-control .remove').forEach(button => {
-                button.addEventListener('click', function() {
-                    const type = this.parentElement.dataset.type;
-                    removeDie(type);
-                });
-            });
-
-            // Roll button logic
-            document.getElementById('roll-button').addEventListener('click', rollDice);
-
-            // Animation setup with error handling
-            let lastTime = 0;
-            
-            // Animation loop
-            function animate(time) {
-                try {
-                    requestAnimationFrame(animate);
-                    
-                    // Calculate delta time for physics
-                    const delta = (time - lastTime) / 1000; // Convert to seconds
-                    lastTime = time;
-                    
-                    // Update physics
-                    if (delta < 0.2) { // Skip extreme deltas (e.g., after tab becomes active again)
-                        updateDicePhysics(delta);
-                    }
-                    
-                    // Render the scene
-                    renderer.render(scene, camera);
-                } catch (error) {
-                    console.error("Animation error:", error);
-                }
-            }
-            
-            // Start animation with error handling
-            try {
-                animate(0);
-            } catch (error) {
-                console.error("Failed to start animation:", error);
-            }
-
-            // Handle window resize - improved to maintain aspect ratio correctly
-            window.addEventListener('resize', () => {
-                const width = container.clientWidth;
-                const height = container.clientHeight;
-                camera.aspect = width / height;
-                camera.updateProjectionMatrix();
-                renderer.setSize(width, height);
-            });
-            
-            // Dice colors with great contrast against black background
-            const diceColors = {
-                d4: 0xff5555,   // Bright Red
-                d6: 0x55ff55,   // Bright Green
-                d8: 0x5555ff,   // Bright Blue
-                d10: 0xff55ff,  // Bright Purple
-                d12: 0xffff44,  // Bright Yellow
-                d20: 0x55ffff   // Bright Cyan
-            };
+            // Add initial dice
+            addDie('d4');
+            addDie('d6');
+            addDie('d8');
+            addDie('d10');
+            addDie('d12');
+            addDie('d20');
         });
     </script>
 </body>
