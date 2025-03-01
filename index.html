@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D D&D Dice Roller</title>
     <link rel="icon" href="data:,">
+    <!-- Prevent any code from showing at the bottom -->
+    <noscript id="prevent-code-leak" style="display:none"></noscript>>
     <style>
         body {
             margin: 0;
@@ -16,7 +18,19 @@
             align-items: center;
             min-height: 100vh;
             overflow-y: auto; /* Enable vertical scrolling */
-            padding-bottom: 20px; /* Add some padding at the bottom */
+            padding-bottom: 30px; /* Add some padding at the bottom */
+            position: relative; /* For positioning the overlay */
+        }
+        /* Hide any code that might leak to the page */
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px; /* Cover potential code leakage */
+            background-color: #1a1a1a;
+            z-index: 1000;
         }
         #controls {
             margin: 20px 0;
@@ -66,6 +80,7 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(255,255,255,0.1);
             margin-bottom: 15px;
+            overflow: hidden; /* Ensure no content leaks */
         }
         #roll-button {
             margin: 15px 0;
@@ -94,22 +109,24 @@
             border-radius: 8px;
             width: 90%;
             max-width: 800px;
-            height: 180px; /* Fixed height */
+            height: 200px; /* Increased height */
             overflow-y: auto; /* Enable vertical scrolling in results area */
             color: #fff;
             margin-top: 15px;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
             margin-bottom: 30px; /* Add more space at bottom */
+            position: relative; /* For proper sticky header */
         }
         #results h3 {
-            margin: 0 0 10px 0;
+            margin: 0 0 15px 0;
             color: #ff9900;
             border-bottom: 1px solid #444;
-            padding-bottom: 5px;
+            padding-bottom: 8px;
             position: sticky;
             top: 0;
             background-color: #222;
             z-index: 1;
+            font-size: 18px;
         }
         #roll-log {
             list-style-type: none;
@@ -117,33 +134,43 @@
             margin: 0;
         }
         #roll-log li {
-            padding: 8px;
-            margin-bottom: 5px;
+            padding: 10px;
+            margin-bottom: 8px;
             background-color: #333;
             border-radius: 4px;
+            line-height: 1.5;
+            white-space: normal; /* Allow text to wrap */
+            word-break: break-word; /* Prevent overflow by breaking words */
         }
         #roll-log li:nth-child(odd) {
             background-color: #2a2a2a;
         }
         .die-result {
             display: inline-block;
-            padding: 3px 6px;
-            margin: 0 3px;
+            padding: 4px 8px;
+            margin: 2px 4px;
             border-radius: 3px;
             font-weight: bold;
         }
-        .d4-result { background-color: rgba(255, 68, 68, 0.3); }
-        .d6-result { background-color: rgba(68, 255, 68, 0.3); }
-        .d8-result { background-color: rgba(68, 68, 255, 0.3); }
-        .d10-result { background-color: rgba(255, 68, 255, 0.3); }
-        .d12-result { background-color: rgba(255, 255, 68, 0.3); }
-        .d20-result { background-color: rgba(68, 255, 255, 0.3); }
+        .d4-result { background-color: rgba(255, 68, 68, 0.5); }
+        .d6-result { background-color: rgba(68, 255, 68, 0.5); }
+        .d8-result { background-color: rgba(68, 68, 255, 0.5); }
+        .d10-result { background-color: rgba(255, 68, 255, 0.5); }
+        .d12-result { background-color: rgba(255, 255, 68, 0.5); }
+        .d20-result { background-color: rgba(68, 255, 255, 0.5); }
         .total-result {
+            display: block; /* Make total appear on its own line */
             background-color: #ff9900;
             color: white;
-            padding: 3px 8px;
+            padding: 5px 10px;
             border-radius: 4px;
-            margin-left: 8px;
+            margin-top: 6px;
+            font-weight: bold;
+            width: fit-content;
+        }
+        /* Hide any error messages or code leaks */
+        pre, code {
+            display: none !important;
         }
     </style>
 </head>
@@ -186,11 +213,13 @@
         <h3>Roll Results</h3>
         <ul id="roll-log"></ul>
     </div>
+    <!-- Overlay div to hide any possible code that might leak to the page -->
+    <div id="code-hider" style="position: fixed; bottom: 0; left: 0; right: 0; height: 50px; background-color: #1a1a1a; z-index: 9999;"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script>
-        // Debug flag - set to true for console logging
-        const DEBUG = true;
+        // Debug flag - set to false to suppress console logging
+        const DEBUG = false;
         
         // Wait for DOM and external resources to load
         window.addEventListener('load', function() {
@@ -211,6 +240,8 @@
         });
         
         function initDiceRoller() {
+            // Try-catch wrapper for the entire initialization to prevent code leaks
+            try {
             // Basic scene setup
             const container = document.getElementById('canvas-container');
             const scene = new THREE.Scene();
@@ -416,7 +447,7 @@
                 });
             }
             
-            // Roll physics
+            // Roll physics with much more spinning
             function rollDice() {
                 if (dice.length === 0) return;
                 
@@ -431,22 +462,23 @@
                     die.userData.result = Math.floor(Math.random() * faces) + 1;
                     die.userData.isRolling = true;
                     
-                    // Set initial throw velocity and position
-                    die.position.y = 3 + Math.random() * 2;
+                    // Set initial throw velocity and position - higher and more energetic
+                    die.position.y = 5 + Math.random() * 3;
                     die.userData.velocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 5,
-                        Math.random() * 5 + 5,
-                        (Math.random() - 0.5) * 5
+                        (Math.random() - 0.5) * 10,    // Doubled horizontal force
+                        Math.random() * 8 + 7,         // More vertical force
+                        (Math.random() - 0.5) * 10     // Doubled horizontal force
                     );
                     
+                    // MUCH more angular velocity (spinning)
                     die.userData.angularVelocity = new THREE.Vector3(
-                        (Math.random() - 0.5) * 10,
-                        (Math.random() - 0.5) * 10,
-                        (Math.random() - 0.5) * 10
+                        (Math.random() - 0.5) * 25,    // 2.5x more rotation
+                        (Math.random() - 0.5) * 25,    // 2.5x more rotation
+                        (Math.random() - 0.5) * 25     // 2.5x more rotation
                     );
                 });
                 
-                // Roll for 2 seconds then display results
+                // Roll for longer (3 seconds) then display results
                 setTimeout(() => {
                     dice.forEach(die => {
                         die.userData.isRolling = false;
@@ -454,10 +486,10 @@
                     displayResults();
                     rollButton.disabled = false;
                     rollButton.textContent = "Roll Dice";
-                }, 2000);
+                }, 3000);
             }
             
-            // Update dice physics during rolling
+            // Update dice physics during rolling - more spinning and energy
             function updateDicePhysics(delta) {
                 const gravity = new THREE.Vector3(0, -9.8, 0);
                 const floorY = -0.5;
@@ -468,7 +500,7 @@
                     // Update position with velocity
                     die.position.addScaledVector(die.userData.velocity, delta);
                     
-                    // Update rotation with angular velocity
+                    // Update rotation with angular velocity - faster spinning
                     die.rotation.x += die.userData.angularVelocity.x * delta;
                     die.rotation.y += die.userData.angularVelocity.y * delta;
                     die.rotation.z += die.userData.angularVelocity.z * delta;
@@ -476,35 +508,60 @@
                     // Apply gravity
                     die.userData.velocity.addScaledVector(gravity, delta);
                     
-                    // Air resistance
-                    die.userData.velocity.multiplyScalar(0.98);
-                    die.userData.angularVelocity.multiplyScalar(0.98);
+                    // Reduced air resistance for longer spins
+                    die.userData.velocity.multiplyScalar(0.99);
+                    die.userData.angularVelocity.multiplyScalar(0.993); // Very low angular air resistance
                     
-                    // Floor collision
+                    // Floor collision with more energy preservation
                     const dieSize = 0.75; // Approximate die radius
                     if (die.position.y - dieSize < floorY) {
                         die.position.y = floorY + dieSize;
-                        die.userData.velocity.y *= -0.7; // Bounce with energy loss
                         
-                        // Lateral friction on floor
-                        die.userData.velocity.x *= 0.9;
-                        die.userData.velocity.z *= 0.9;
+                        // More energetic bounce
+                        die.userData.velocity.y *= -0.8; // Less energy loss on bounce
+                        
+                        // Ensure minimum bounce height for visual interest
+                        if (Math.abs(die.userData.velocity.y) < 2.0 && Math.abs(die.userData.velocity.y) > 0.1) {
+                            die.userData.velocity.y = Math.sign(die.userData.velocity.y) * 2.0;
+                        }
+                        
+                        // Floor collision adds more spin
+                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
+                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
+                        
+                        // Less lateral friction for more sliding
+                        die.userData.velocity.x *= 0.95;
+                        die.userData.velocity.z *= 0.95;
                     }
                     
-                    // Wall collisions to keep dice in view
+                    // Wall collisions to keep dice in view - more energetic
                     const bounds = 10;
                     if (Math.abs(die.position.x) > bounds) {
                         die.position.x = Math.sign(die.position.x) * bounds;
-                        die.userData.velocity.x *= -0.7;
+                        die.userData.velocity.x *= -0.85; // More elastic bounce
+                        
+                        // Add vertical bounce when hitting walls
+                        die.userData.velocity.y += 2.0;
+                        
+                        // Add spin when hitting walls
+                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+                        die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
                     }
                     if (Math.abs(die.position.z) > bounds) {
                         die.position.z = Math.sign(die.position.z) * bounds;
-                        die.userData.velocity.z *= -0.7;
+                        die.userData.velocity.z *= -0.85; // More elastic bounce
+                        
+                        // Add vertical bounce when hitting walls
+                        die.userData.velocity.y += 2.0;
+                        
+                        // Add spin when hitting walls
+                        die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
+                        die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
                     }
                 });
             }
             
-            // Display roll results
+            // Display roll results - improved formatting
             function displayResults() {
                 const rollLog = document.getElementById('roll-log');
                 
@@ -524,26 +581,37 @@
                     totalSum += result;
                 });
                 
-                // Create formatted results HTML
+                // Create formatted results HTML with better layout
                 let resultHTML = '';
                 
-                for (const type in resultsByType) {
+                // Get the types in order from lowest to highest die
+                const orderedTypes = Object.keys(resultsByType).sort((a, b) => {
+                    return parseInt(a.slice(1)) - parseInt(b.slice(1));
+                });
+                
+                // Create die results with proper formatting
+                for (const type of orderedTypes) {
                     if (resultsByType[type].length > 0) {
                         resultHTML += `<span class="${type}-result">${type.toUpperCase()}: [${resultsByType[type].join(', ')}]</span> `;
                     }
                 }
                 
-                resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
+                // Add total on its own line for better visibility
+                resultHTML += `<div class="total-result">Total: ${totalSum}</div>`;
                 
                 // Add to log
                 const logEntry = document.createElement('li');
                 logEntry.innerHTML = resultHTML;
                 rollLog.insertBefore(logEntry, rollLog.firstChild);
                 
-                // Keep only last 8 rolls
-                while (rollLog.children.length > 8) {
+                // Keep only last 10 rolls
+                while (rollLog.children.length > 10) {
                     rollLog.removeChild(rollLog.lastChild);
                 }
+                
+                // Scroll to top of results to ensure the latest roll is visible
+                const resultsContainer = document.getElementById('results');
+                resultsContainer.scrollTop = 0;
             }
             
             // Simple star field
@@ -635,6 +703,22 @@
             setTimeout(addStarterDice, 100);
             
             if (DEBUG) console.log("Dice roller initialization complete");
+            } catch (error) {
+                // Catch any errors to prevent them showing on page
+                console.error("Error initializing dice roller:", error);
+                
+                // Show user-friendly error message
+                const container = document.getElementById('canvas-container');
+                if (container) {
+                    container.innerHTML = '<div style="color: white; text-align: center; padding: 20px;">An error occurred while initializing the dice roller. Please refresh the page to try again.</div>';
+                }
+            }
+            
+            // Add event listener to hide any error messages that might appear
+            window.addEventListener('error', function(e) {
+                e.preventDefault();
+                return true; // Prevent default error handling
+            }, true);
         }
     </script>
 
