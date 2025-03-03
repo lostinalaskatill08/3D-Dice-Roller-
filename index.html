@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>3D D&D Dice Roller</title>
   <link rel="icon" href="data:,">
   <style>
@@ -14,8 +14,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      height: 100vh;
-      overflow: hidden;
+      /* Removed height: 100vh and overflow: hidden so the page can scroll. */
     }
     #controls {
       margin: 20px 0;
@@ -36,7 +35,6 @@
       color: yellow;
       font-weight: bold;
     }
-    /* Revert buttons to original styling */
     .dice-control button {
       background-color: yellow;
       border: none;
@@ -48,14 +46,16 @@
     .dice-control button:hover {
       background-color: #e6e600;
     }
+    /* Give a fixed height (e.g. 400px) so the dice area is clearly visible. */
     #canvas-container {
       width: 80%;
-      height: 50%;
+      height: 400px;
       border: 2px solid #ff4444;
       background-color: #000;
       position: relative;
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(255,255,255,0.1);
+      margin-bottom: 10px;
     }
     #roll-button {
       margin: 10px 0;
@@ -70,17 +70,18 @@
     #roll-button:hover {
       background-color: #3333cc;
     }
+    /* Increased max-height for the roll log to make it more readable. */
     #results {
       background-color: #222;
       padding: 10px;
       border: 1px solid yellow;
       border-radius: 5px;
       width: 80%;
-      max-height: 200px;
+      max-height: 300px; /* Adjust as desired */
       overflow-y: auto;
       color: #fff;
+      margin-bottom: 10px;
     }
-    /* Move the heading outside the scrolling area */
     #results-header {
       color: yellow;
       margin: 0 0 5px 0;
@@ -112,12 +113,12 @@
       font-weight: bold;
     }
     /* Dice result backgrounds matching dice colors */
-    .d4-result { background-color: rgba(139, 0, 0, 0.5); }
-    .d6-result { background-color: rgba(105, 105, 105, 0.5); }
-    .d8-result { background-color: rgba(47, 79, 79, 0.5); }
-    .d10-result { background-color: rgba(85, 107, 47, 0.5); }
-    .d12-result { background-color: rgba(184, 134, 11, 0.5); }
-    .d20-result { background-color: rgba(72, 61, 139, 0.5); }
+    .d4-result    { background-color: rgba(139, 0, 0, 0.5); }
+    .d6-result    { background-color: rgba(105, 105, 105, 0.5); }
+    .d8-result    { background-color: rgba(47, 79, 79, 0.5); }
+    .d10-result   { background-color: rgba(85, 107, 47, 0.5); }
+    .d12-result   { background-color: rgba(184, 134, 11, 0.5); }
+    .d20-result   { background-color: rgba(72, 61, 139, 0.5); }
     .total-result {
       background-color: #ff9900;
       color: white;
@@ -125,7 +126,7 @@
       border-radius: 4px;
       margin-left: 8px;
     }
-    /* New styling for Dice Usage Information section */
+    /* Dice Usage Information section */
     #dice-info {
       background-color: #222;
       color: #fff;
@@ -134,12 +135,13 @@
       width: 80%;
       padding: 10px;
       margin-top: 10px;
-      max-height: 300px;
+      max-height: 300px; /* You can also adjust this if you want more/less space. */
       overflow-y: auto;
     }
     #dice-info h2, #dice-info h3 {
       color: yellow;
       text-align: center;
+      margin: 10px 0 5px;
     }
     #dice-info p {
       margin: 5px 0;
@@ -180,13 +182,17 @@
       <button class="add">+</button>
     </div>
   </div>
+
   <div id="canvas-container"></div>
+
   <button id="roll-button">Roll Dice</button>
+
   <div id="results-header">Roll Results</div>
   <div id="results">
     <ul id="roll-log"></ul>
   </div>
-  <!-- New section: Dice Usage Information -->
+
+  <!-- Dice Usage Information -->
   <div id="dice-info">
     <h2>Dice Usage Information</h2>
     <div class="dice-section">
@@ -196,41 +202,41 @@
     </div>
     <div class="dice-section">
       <h3>D6 (6-sided die)</h3>
-      <p><strong>Damage:</strong> Frequently rolled for weapon damage (e.g. shortswords, handaxes) and spells (such as Fireball with multiple d6s).</p>
-      <p><strong>Ability Scores:</strong> Employed in the 4d6 (drop lowest) method for generating ability scores.</p>
-      <p><strong>Hit Dice:</strong> Used by less durable classes (e.g. Wizards, Sorcerers) for determining hit points.</p>
+      <p><strong>Damage:</strong> Frequently rolled for weapon damage (shortswords, handaxes) and big spells (Fireball with multiple d6s).</p>
+      <p><strong>Ability Scores:</strong> Commonly used for 4d6 drop-lowest ability score generation.</p>
+      <p><strong>Hit Dice:</strong> Wizards/Sorcerers use a d6 for HP growth.</p>
     </div>
     <div class="dice-section">
       <h3>D8 (8-sided die)</h3>
-      <p><strong>Damage:</strong> Commonly used for one-handed weapons (longswords, rapiers) and spells (Ray of Frost, Shocking Grasp).</p>
-      <p><strong>Hit Dice:</strong> Forms the basis for HP for many mid-tier classes (Cleric, Druid, Rogue, Bard, Monk).</p>
+      <p><strong>Damage:</strong> Standard for one-handed martial weapons (longswords, rapiers) and many spells.</p>
+      <p><strong>Hit Dice:</strong> Mid-tier classes (Cleric, Druid, Rogue, Bard, Monk).</p>
     </div>
     <div class="dice-section">
       <h3>D10 (10-sided die)</h3>
-      <p><strong>Damage:</strong> Applied for heavy weapons and potent spells (like Inflict Wounds) and also used in pairs for percentile (d100) rolls.</p>
-      <p><strong>Hit Dice:</strong> Utilized by classes such as Fighters, Paladins, and Rangers.</p>
+      <p><strong>Damage:</strong> Heavy weapons (e.g. glaives, halberds) and potent spells (Inflict Wounds). Also used for percentile rolls (d100).</p>
+      <p><strong>Hit Dice:</strong> Fighter, Paladin, Ranger.</p>
     </div>
     <div class="dice-section">
       <h3>D12 (12-sided die)</h3>
-      <p><strong>Damage:</strong> Typically reserved for heavy-damage weapons (e.g. greataxe) and high-impact effects.</p>
-      <p><strong>Hit Dice:</strong> Barbarians use d12s to reflect their superior durability.</p>
+      <p><strong>Damage:</strong> Big hits like a greataxe or certain high-level effects.</p>
+      <p><strong>Hit Dice:</strong> Barbarians are the only class with a d12.</p>
     </div>
     <div class="dice-section">
       <h3>D20 (20-sided die)</h3>
-      <p><strong>Core Mechanic:</strong> Determines attack rolls, ability checks, saving throws, and initiative. A natural 20 is a critical success and a natural 1 is a failure.</p>
+      <p><strong>Core Mechanic:</strong> Rolled for attacks, ability checks, saving throws, and initiative. A natural 20 is a critical success, while a natural 1 is often a failure.</p>
     </div>
   </div>
 
+  <!-- Three.js and your script -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
-    // (Your existing JavaScript remains unchanged)
     // Custom function to create a pentagonal trapezohedron for the D10
     function createD10Geometry() {
       const alpha = 0.8;
       const phi = Math.PI / 10;
       const r = Math.sin(alpha);
       const cy = Math.cos(alpha);
-      
+
       const top = [];
       const bottom = [];
       for (let i = 0; i < 5; i++) {
@@ -239,7 +245,7 @@
         top.push(new THREE.Vector3(r * Math.cos(angleTop), cy, r * Math.sin(angleTop)));
         bottom.push(new THREE.Vector3(r * Math.cos(angleBottom), -cy, r * Math.sin(angleBottom)));
       }
-      
+
       const vertices = [];
       for (let i = 0; i < 5; i++) {
         vertices.push(top[i].x, top[i].y, top[i].z);
@@ -247,7 +253,7 @@
       for (let i = 0; i < 5; i++) {
         vertices.push(bottom[i].x, bottom[i].y, bottom[i].z);
       }
-      
+
       const indices = [];
       for (let i = 0; i < 5; i++) {
         let t0 = i;
@@ -257,7 +263,7 @@
         indices.push(t0, b0, t1);
         indices.push(b0, b1, t1);
       }
-      
+
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       geometry.setIndex(indices);
@@ -270,16 +276,19 @@
         console.error('Three.js failed to load. Check your internet connection or the CDN link.');
         return;
       }
+
       const controlledAreaRadius = 7;
       const floorY = -0.5;
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
+
       const container = document.getElementById('canvas-container');
       const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
 
+      // Lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambientLight);
       const pointLight = new THREE.PointLight(0xffffff, 1);
@@ -289,6 +298,7 @@
       camera.position.z = 12;
       camera.position.y = 5;
 
+      // Starfield
       function createStars() {
         const starCount = 1000;
         const starGeometry = new THREE.BufferGeometry();
@@ -306,6 +316,7 @@
       }
       createStars();
 
+      // Floor
       const floorGeometry = new THREE.CircleGeometry(controlledAreaRadius, 32);
       const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.2 });
       const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -313,6 +324,7 @@
       floor.position.y = floorY;
       scene.add(floor);
 
+      // Border ring
       const borderGeometry = new THREE.RingGeometry(controlledAreaRadius - 0.2, controlledAreaRadius, 64);
       const borderMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444, side: THREE.DoubleSide });
       const border = new THREE.Mesh(borderGeometry, borderMaterial);
@@ -320,9 +332,11 @@
       border.position.y = floorY + 0.05;
       scene.add(border);
 
+      // Dice data
       const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
       const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
       const dice = [];
+
       const diceColors = {
         d4: 0x8B0000,
         d6: 0x696969,
@@ -331,6 +345,7 @@
         d12: 0xB8860B,
         d20: 0x483D8B
       };
+
       const geometries = {
         d4: new THREE.TetrahedronGeometry(1),
         d6: new THREE.BoxGeometry(1.4, 1.4, 1.4),
@@ -343,13 +358,25 @@
       function createDie(type) {
         const geometry = geometries[type];
         const color = diceColors[type];
-        const material = new THREE.MeshStandardMaterial({ color: color, metalness: 0.3, roughness: 0.2 });
+        const material = new THREE.MeshStandardMaterial({
+          color: color,
+          metalness: 0.3,
+          roughness: 0.2
+        });
         const die = new THREE.Mesh(geometry, material);
+
+        // Edges for visual clarity
         const wireframeGeometry = new THREE.EdgesGeometry(geometry);
         const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
         const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
         die.add(wireframe);
-        die.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
+
+        die.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2
+        );
+
         die.userData = {
           type: type,
           result: 0,
@@ -394,10 +421,18 @@
         dice.forEach((die, index) => {
           const row = Math.floor(index / cols);
           const col = index % cols;
-          die.position.set(col * spacing - offsetX, 0.6 + Math.random() * 0.2, row * spacing - offsetZ);
+          die.position.set(
+            col * spacing - offsetX,
+            0.6 + Math.random() * 0.2,
+            row * spacing - offsetZ
+          );
           const scale = 0.9 + Math.random() * 0.2;
           die.scale.set(scale, scale, scale);
-          die.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
+          die.rotation.set(
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2
+          );
         });
       }
 
@@ -415,14 +450,26 @@
         const rollButton = document.getElementById('roll-button');
         rollButton.disabled = true;
         prepareDiceForRoll();
+
         dice.forEach(die => {
           die.userData.isRolling = true;
           die.userData.result = Math.floor(Math.random() * parseInt(die.userData.type.slice(1))) + 1;
-          die.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 5 + 3, (Math.random() - 0.5) * 3);
-          die.userData.angularVelocity = new THREE.Vector3((Math.random() - 0.5) * 25, (Math.random() - 0.5) * 25, (Math.random() - 0.5) * 25);
+          die.userData.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 3,
+            Math.random() * 5 + 3,
+            (Math.random() - 0.5) * 3
+          );
+          die.userData.angularVelocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 25,
+            (Math.random() - 0.5) * 25,
+            (Math.random() - 0.5) * 25
+          );
         });
+
         setTimeout(() => {
-          dice.forEach(die => { die.userData.isRolling = false; });
+          dice.forEach(die => {
+            die.userData.isRolling = false;
+          });
           displayResults();
           rollButton.disabled = false;
         }, 2500);
@@ -438,10 +485,18 @@
         dice.forEach((die, index) => {
           const row = Math.floor(index / cols);
           const col = index % cols;
-          die.position.set(col * spacing - offsetX + (Math.random() * 0.5 - 0.25), 3 + Math.random(), row * spacing - offsetZ + (Math.random() * 0.5 - 0.25));
+          die.position.set(
+            col * spacing - offsetX + (Math.random() * 0.5 - 0.25),
+            3 + Math.random(),
+            row * spacing - offsetZ + (Math.random() * 0.5 - 0.25)
+          );
           die.userData.initialX = die.position.x;
           die.userData.initialZ = die.position.z;
-          die.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
+          die.rotation.set(
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2
+          );
         });
       }
 
@@ -456,6 +511,7 @@
           die.userData.velocity.addScaledVector(gravity, delta);
           die.userData.velocity.multiplyScalar(0.98);
           die.userData.angularVelocity.multiplyScalar(0.98);
+
           const dieRadius = 0.8;
           if (die.position.y - dieRadius < floorY) {
             die.position.y = floorY + dieRadius;
@@ -483,6 +539,8 @@
             die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
           }
         });
+
+        // Dice-to-dice collisions
         for (let i = 0; i < dice.length; i++) {
           if (!dice[i].userData.isRolling) continue;
           for (let j = i + 1; j < dice.length; j++) {
@@ -524,6 +582,8 @@
             }
           }
         }
+
+        // Snap to rest
         dice.forEach(die => {
           if (!die.userData.isRolling &&
               die.userData.velocity.length() < 0.1 &&
@@ -549,6 +609,7 @@
         const rollLog = document.getElementById('roll-log');
         const resultsByType = {};
         let totalSum = 0;
+
         dice.forEach(die => {
           const type = die.userData.type;
           const result = die.userData.result;
@@ -558,6 +619,7 @@
           resultsByType[type].push(result);
           totalSum += result;
         });
+
         let resultHTML = '';
         for (const type in resultsByType) {
           if (resultsByType[type].length > 0) {
@@ -565,14 +627,18 @@
           }
         }
         resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
+
         const logEntry = document.createElement('li');
         logEntry.innerHTML = resultHTML;
         rollLog.insertBefore(logEntry, rollLog.firstChild);
+
+        // Keep only the most recent 10 rolls
         while (rollLog.children.length > 10) {
           rollLog.removeChild(rollLog.lastChild);
         }
       }
 
+      // Event listeners
       document.querySelectorAll('.dice-control .add').forEach(button => {
         button.addEventListener('click', function() {
           const type = this.parentElement.dataset.type;
@@ -603,6 +669,7 @@
         renderer.setSize(container.clientWidth, container.clientHeight);
       });
 
+      // Add one of each die to start
       addDie('d4');
       addDie('d6');
       addDie('d8');
