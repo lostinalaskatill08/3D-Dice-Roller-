@@ -36,7 +36,7 @@
       color: yellow;
       font-weight: bold;
     }
-    /* Reverted button styling */
+    /* Revert buttons to original styling */
     .dice-control button {
       background-color: yellow;
       border: none;
@@ -169,13 +169,63 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
+    // Custom function to create a pentagonal trapezohedron for the D10
+    function createD10Geometry() {
+      // Parameters chosen to yield a shape similar to a real D10.
+      const alpha = 0.8;         // Angle determining the vertical spread of top and bottom vertices
+      const phi = Math.PI / 10;    // 18° offset to rotate the top ring relative to the bottom ring
+      const r = Math.sin(alpha);   // horizontal radius
+      const cy = Math.cos(alpha);  // vertical coordinate for the top ring (and -cy for the bottom)
+      
+      const top = [];
+      const bottom = [];
+      for (let i = 0; i < 5; i++) {
+        let angleTop = (2 * Math.PI * i / 5) + phi;
+        let angleBottom = (2 * Math.PI * i / 5) - phi;
+        top.push(new THREE.Vector3(r * Math.cos(angleTop), cy, r * Math.sin(angleTop)));
+        bottom.push(new THREE.Vector3(r * Math.cos(angleBottom), -cy, r * Math.sin(angleBottom)));
+      }
+      
+      // For a pentagonal trapezohedron, we have 10 faces.
+      // We construct each quadrilateral face (a kite) by combining adjacent vertices from the top and bottom rings.
+      // Since Three.js requires triangulated faces, we split each quadrilateral into 2 triangles.
+      const vertices = [];
+      // Add top vertices (indices 0-4)
+      for (let i = 0; i < 5; i++) {
+        vertices.push(top[i].x, top[i].y, top[i].z);
+      }
+      // Add bottom vertices (indices 5-9)
+      for (let i = 0; i < 5; i++) {
+        vertices.push(bottom[i].x, bottom[i].y, bottom[i].z);
+      }
+      
+      const indices = [];
+      for (let i = 0; i < 5; i++) {
+        // Define indices for the quadrilateral face between top[i], bottom[i], top[(i+1)%5] and bottom[(i+1)%5]
+        let t0 = i;                   // top[i]
+        let t1 = (i + 1) % 5;           // top[(i+1)%5]
+        let b0 = i + 5;               // bottom[i]
+        let b1 = ((i + 1) % 5) + 5;     // bottom[(i+1)%5]
+        // Triangle 1: top[i], bottom[i], top[(i+1)%5]
+        indices.push(t0, b0, t1);
+        // Triangle 2: bottom[i], bottom[(i+1)%5], top[(i+1)%5]
+        indices.push(b0, b1, t1);
+      }
+      
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
     window.addEventListener('load', function() {
       if (typeof THREE === 'undefined') {
         console.error('Three.js failed to load. Check your internet connection or the CDN link.');
         return;
       }
 
-      // Increase the controlled area to accommodate wider horizontal spacing.
+      // Increase the controlled area to allow for better horizontal separation.
       const controlledAreaRadius = 7;
       const floorY = -0.5;
 
@@ -244,22 +294,22 @@
       const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
       const dice = [];
 
-      // Dice colors (changed D6 from brown to dark gray)
+      // Dice colors (note: D6 changed from brown to dark gray)
       const diceColors = {
         d4: 0x8B0000,    // Dark Red
-        d6: 0x696969,    // Dark Gray (instead of brown)
+        d6: 0x696969,    // Dark Gray
         d8: 0x2F4F4F,    // Dark Slate Gray
         d10: 0x556B2F,   // Dark Olive Green
         d12: 0xB8860B,   // Dark Goldenrod
         d20: 0x483D8B    // Dark Slate Blue
       };
 
-      // Geometries for dice
+      // Geometries for dice – note the D10 now uses our custom geometry.
       const geometries = {
         d4: new THREE.TetrahedronGeometry(1),
         d6: new THREE.BoxGeometry(1.4, 1.4, 1.4),
         d8: new THREE.OctahedronGeometry(1),
-        d10: new THREE.ConeGeometry(0.8, 1.5, 10),
+        d10: createD10Geometry(),
         d12: new THREE.DodecahedronGeometry(1),
         d20: new THREE.IcosahedronGeometry(1)
       };
@@ -371,7 +421,7 @@
             Math.random() * 5 + 3,
             (Math.random() - 0.5) * 3
           );
-          // Increased spin by using a higher multiplier for angular velocity.
+          // Increased angular velocity for more pronounced spin.
           die.userData.angularVelocity = new THREE.Vector3(
             (Math.random() - 0.5) * 25,
             (Math.random() - 0.5) * 25,
@@ -413,7 +463,7 @@
         });
       }
 
-      // Physics update including gravity, collisions, and snapping the dice to a natural resting position.
+      // Physics update: gravity, collisions, and snapping dice to a natural resting position.
       function updateDicePhysics(delta) {
         const gravity = new THREE.Vector3(0, -9.8, 0);
         dice.forEach(die => {
