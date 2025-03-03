@@ -37,20 +37,21 @@
       font-weight: bold;
     }
     .dice-control button {
-      background-color: yellow;
+      background-color: #8B4513;
       border: none;
       padding: 5px 10px;
       cursor: pointer;
       font-weight: bold;
       border-radius: 3px;
+      color: #fff;
     }
     .dice-control button:hover {
-      background-color: #e6e600;
+      background-color: #6B3F1D;
     }
     #canvas-container {
       width: 80%;
       height: 50%;
-      border: 2px solid #ff4444;
+      border: 2px solid #8B0000;
       background-color: #000;
       position: relative;
       border-radius: 8px;
@@ -59,7 +60,7 @@
     #roll-button {
       margin: 10px 0;
       padding: 10px 20px;
-      background-color: #4444ff;
+      background-color: #8B4513;
       color: white;
       border: none;
       border-radius: 5px;
@@ -67,7 +68,7 @@
       font-size: 16px;
     }
     #roll-button:hover {
-      background-color: #3333cc;
+      background-color: #6B3F1D;
     }
     #results {
       background-color: #222;
@@ -110,12 +111,12 @@
       border-radius: 3px;
       font-weight: bold;
     }
-    .d4-result { background-color: rgba(255, 68, 68, 0.5); }
-    .d6-result { background-color: rgba(68, 255, 68, 0.5); }
-    .d8-result { background-color: rgba(68, 68, 255, 0.5); }
-    .d10-result { background-color: rgba(255, 68, 255, 0.5); }
-    .d12-result { background-color: rgba(255, 255, 68, 0.5); }
-    .d20-result { background-color: rgba(68, 255, 255, 0.5); }
+    .d4-result { background-color: rgba(139, 0, 0, 0.5); }
+    .d6-result { background-color: rgba(160, 82, 45, 0.5); }
+    .d8-result { background-color: rgba(47, 79, 79, 0.5); }
+    .d10-result { background-color: rgba(85, 107, 47, 0.5); }
+    .d12-result { background-color: rgba(184, 134, 11, 0.5); }
+    .d20-result { background-color: rgba(72, 61, 139, 0.5); }
     .total-result {
       background-color: #ff9900;
       color: white;
@@ -174,8 +175,8 @@
       }
 
       // Controlled area parameters
-      const controlledAreaRadius = 5; // The dice will stay within a circle of this radius
-      const floorY = -0.5; // Y position for the floor
+      const controlledAreaRadius = 5;
+      const floorY = -0.5;
 
       // Scene setup
       const scene = new THREE.Scene();
@@ -193,11 +194,11 @@
       pointLight.position.set(10, 10, 10);
       scene.add(pointLight);
 
-      // Camera position (adjust as needed)
+      // Camera position
       camera.position.z = 10;
       camera.position.y = 4;
 
-      // Create a simple starfield for atmosphere
+      // Starfield for atmosphere
       function createStars() {
         const starCount = 1000;
         const starGeometry = new THREE.BufferGeometry();
@@ -215,7 +216,7 @@
       }
       createStars();
 
-      // Add floor (a circle matching the controlled area)
+      // Floor and border for the controlled area
       const floorGeometry = new THREE.CircleGeometry(controlledAreaRadius, 32);
       const floorMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x000000, 
@@ -227,10 +228,9 @@
       floor.position.y = floorY;
       scene.add(floor);
 
-      // Add visible border around the controlled area
       const borderGeometry = new THREE.RingGeometry(controlledAreaRadius - 0.2, controlledAreaRadius, 64);
       const borderMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xff0000, 
+        color: 0x8B0000, 
         side: THREE.DoubleSide 
       });
       const border = new THREE.Mesh(borderGeometry, borderMaterial);
@@ -243,14 +243,14 @@
       const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
       const dice = [];
 
-      // Dice colors
+      // D&D themed dice colors
       const diceColors = {
-        d4: 0xff5555,   // Red
-        d6: 0x55ff55,   // Green
-        d8: 0x5555ff,   // Blue
-        d10: 0xff55ff,  // Purple
-        d12: 0xffff55,  // Yellow
-        d20: 0x55ffff   // Cyan
+        d4: 0x8B0000,   // Dark Red
+        d6: 0xA0522D,   // Sienna
+        d8: 0x2F4F4F,   // Dark Slate Gray
+        d10: 0x556B2F,  // Dark Olive Green
+        d12: 0xB8860B,  // Dark Goldenrod
+        d20: 0x483D8B   // Dark Slate Blue
       };
 
       // Geometries for dice
@@ -263,7 +263,7 @@
         d20: new THREE.IcosahedronGeometry(1)
       };
 
-      // Create die with improved visual appearance
+      // Create a die
       function createDie(type) {
         const geometry = geometries[type];
         const color = diceColors[type];
@@ -280,14 +280,12 @@
         const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
         die.add(wireframe);
 
-        // Random starting rotation
         die.rotation.set(
           Math.random() * Math.PI * 2,
           Math.random() * Math.PI * 2,
           Math.random() * Math.PI * 2
         );
 
-        // Store metadata for physics
         die.userData = {
           type: type,
           result: 0,
@@ -299,7 +297,6 @@
         return die;
       }
 
-      // Add and remove dice
       function addDie(type) {
         if (diceCounts[type] < 10) {
           diceCounts[type]++;
@@ -310,6 +307,7 @@
           updateControls();
         }
       }
+
       function removeDie(type) {
         if (diceCounts[type] > 0) {
           diceCounts[type]--;
@@ -323,7 +321,7 @@
         }
       }
 
-      // Position dice in a grid within the controlled area
+      // Position dice in a grid
       function positionDice() {
         if (dice.length === 0) return;
         const spacing = 2.0;
@@ -349,7 +347,6 @@
         });
       }
 
-      // Update the dice count displays
       function updateControls() {
         diceTypes.forEach(type => {
           const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
@@ -359,7 +356,6 @@
         });
       }
 
-      // Roll the dice
       function rollDice() {
         if (dice.length === 0) return;
         const rollButton = document.getElementById('roll-button');
@@ -388,7 +384,6 @@
         }, 2500);
       }
 
-      // Set dice up for the roll by repositioning them in the controlled area
       function prepareDiceForRoll() {
         if (dice.length === 0) return;
         const spacing = 2.5;
@@ -414,22 +409,17 @@
         });
       }
 
-      // In the physics update we handle gravity, collisions, and finally snap the dice when they slow enough.
       function updateDicePhysics(delta) {
         const gravity = new THREE.Vector3(0, -9.8, 0);
         dice.forEach(die => {
           if (!die.userData.isRolling) return;
-          // update position
           die.position.addScaledVector(die.userData.velocity, delta);
-          // update rotation
           die.rotation.x += die.userData.angularVelocity.x * delta;
           die.rotation.y += die.userData.angularVelocity.y * delta;
           die.rotation.z += die.userData.angularVelocity.z * delta;
-          // apply gravity and air resistance
           die.userData.velocity.addScaledVector(gravity, delta);
           die.userData.velocity.multiplyScalar(0.98);
           die.userData.angularVelocity.multiplyScalar(0.98);
-          // floor collision
           const dieRadius = 0.8;
           if (die.position.y - dieRadius < floorY) {
             die.position.y = floorY + dieRadius;
@@ -442,7 +432,6 @@
             die.userData.velocity.x *= 0.8;
             die.userData.velocity.z *= 0.8;
           }
-          // wall collisions (using controlledAreaRadius)
           const dist = Math.sqrt(die.position.x * die.position.x + die.position.z * die.position.z);
           if (dist > controlledAreaRadius) {
             const nx = die.position.x / dist;
@@ -459,7 +448,6 @@
           }
         });
 
-        // Dice-to-dice collision handling
         for (let i = 0; i < dice.length; i++) {
           if (!dice[i].userData.isRolling) continue;
           for (let j = i + 1; j < dice.length; j++) {
@@ -502,17 +490,14 @@
           }
         }
 
-        // If a die is nearly at rest, snap its rotation to a “natural” orientation.
         dice.forEach(die => {
           if (!die.userData.isRolling &&
               die.userData.velocity.length() < 0.1 &&
               die.userData.angularVelocity.length() < 0.1) {
             const type = die.userData.type;
             const euler = new THREE.Euler().setFromQuaternion(die.quaternion);
-            // For d6 (cube) we round x and z to nearest 90°; for others, we round all axes to nearest 45°
             if (type === 'd6') {
               euler.x = Math.round(euler.x / (Math.PI / 2)) * (Math.PI / 2);
-              // Allow y to remain free (rotation around vertical axis is less critical)
               euler.z = Math.round(euler.z / (Math.PI / 2)) * (Math.PI / 2);
             } else {
               euler.x = Math.round(euler.x / (Math.PI / 4)) * (Math.PI / 4);
@@ -526,7 +511,6 @@
         });
       }
 
-      // Display roll results
       function displayResults() {
         const rollLog = document.getElementById('roll-log');
         const resultsByType = {};
@@ -555,7 +539,6 @@
         }
       }
 
-      // Add control listeners
       document.querySelectorAll('.dice-control .add').forEach(button => {
         button.addEventListener('click', function() {
           const type = this.parentElement.dataset.type;
@@ -570,7 +553,6 @@
       });
       document.getElementById('roll-button').addEventListener('click', rollDice);
 
-      // Animation loop
       let lastTime = 0;
       function animate(time) {
         requestAnimationFrame(animate);
@@ -581,14 +563,12 @@
       }
       animate(0);
 
-      // Handle window resize
       window.addEventListener('resize', () => {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
       });
 
-      // Add one of each die initially
       addDie('d4');
       addDie('d6');
       addDie('d8');
