@@ -6,46 +6,38 @@
   <title>3D D&D Dice Roller</title>
   <link rel="icon" href="data:,">
   <style>
-    /* 
-      Using the dark mode background (#1a1a1a) with text (#fafafa).
-      Buttons use #8B0000 (normal), #6d0101 (hover), and #4a3f35 (border).
-      Borders elsewhere use #8b5a2b, matching your "Input Fields & Borders" color.
-    */
     body {
       margin: 0;
-      background-color: #1a1a1a; /* Dark mode background */
-      color: #fafafa;           /* Light text for dark background */
+      background-color: #1a1a1a; /* Dark background */
+      color: #fafafa;
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-
     #controls {
       margin: 20px 0;
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
     }
-
     .dice-control {
-      background-color: #8B0000; /* Dark Red */
+      background-color: #8B0000; /* Red button background */
       padding: 10px;
       margin: 5px;
       border-radius: 5px;
       display: flex;
       align-items: center;
-      border: 1px solid #4a3f35; /* Button border color */
+      border: 1px solid #440000; /* Slightly darker red border */
     }
     .dice-control span {
       margin: 0 10px;
       font-weight: bold;
     }
-
     .dice-control button {
       background-color: #8B0000;
       color: #fafafa;
-      border: 1px solid #4a3f35;
+      border: 1px solid #440000;
       padding: 5px 10px;
       cursor: pointer;
       font-weight: bold;
@@ -55,26 +47,26 @@
       background-color: #6d0101;
     }
 
-    /* Large dice-viewing area with a border that matches your theme (#8b5a2b). */
+    /* 3D viewer with red border */
     #canvas-container {
       width: 80%;
       height: 400px;
-      border: 2px solid #8b5a2b;
-      background-color: #000;
+      border: 2px solid red; /* Red border */
       position: relative;
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(255,255,255,0.1);
       margin-bottom: 10px;
+      background-color: #000;
     }
 
-    /* Buttons follow the same scheme. */
+    /* Buttons remain red */
     #roll-button,
     #copy-log-button {
       margin: 10px 5px;
       padding: 10px 20px;
       background-color: #8B0000;
       color: #fafafa;
-      border: 1px solid #4a3f35;
+      border: 1px solid #440000;
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
@@ -84,20 +76,20 @@
       background-color: #6d0101;
     }
 
-    /* Roll Results container */
+    /* Roll Results container with red border */
     #results-header {
-      color: #fafafa;
       margin: 0 0 5px 0;
       padding: 5px 0;
       font-size: 16px;
       font-weight: bold;
       text-align: center;
       width: 80%;
+      color: #fafafa;
     }
     #results {
       background-color: #2a2a2a;
       padding: 10px;
-      border: 2px solid #8b5a2b;
+      border: 2px solid red; /* Red border */
       border-radius: 5px;
       width: 80%;
       max-height: 300px; /* Adjust as desired */
@@ -120,13 +112,13 @@
       background-color: #2a2a2a;
     }
 
-    /* Dice result backgrounds – now mapped to the token colors from your theme. */
-    .d4-result  { background-color: rgba(178, 34, 34, 0.6); }  /* #B22222 Firebrick */
-    .d6-result  { background-color: rgba(139, 0, 0, 0.6); }    /* #8B0000 Dark Red */
-    .d8-result  { background-color: rgba(65, 105, 225, 0.6); } /* #4169E1 Royal Blue */
-    .d10-result { background-color: rgba(25, 25, 112, 0.6); }  /* #191970 Midnight Blue */
-    .d12-result { background-color: rgba(218, 165, 32, 0.6); } /* #DAA520 Goldenrod */
-    .d20-result { background-color: rgba(184, 134, 11, 0.6); } /* #B8860B Dark Goldenrod */
+    /* Dice result backgrounds (dark red, blue, purple, green, yellow, orange) */
+    .d4-result    { background-color: rgba(139, 0, 0, 0.6); }    /* Dark Red */
+    .d6-result    { background-color: rgba(0, 0, 139, 0.6); }    /* Blue (DarkBlue) */
+    .d8-result    { background-color: rgba(75, 0, 130, 0.6); }   /* Purple (Indigo) */
+    .d10-result   { background-color: rgba(0, 100, 0, 0.6); }    /* Green (DarkGreen) */
+    .d12-result   { background-color: rgba(204, 204, 0, 0.6); }  /* Yellow (#CCCC00) */
+    .d20-result   { background-color: rgba(255, 140, 0, 0.6); }  /* Orange (DarkOrange) */
 
     .total-result {
       background-color: #8b5a2b;
@@ -137,11 +129,11 @@
       font-weight: bold;
     }
 
-    /* Dice Usage Information section */
+    /* Dice Usage Information section with red border */
     #dice-info {
       background-color: #2a2a2a;
       color: #fafafa;
-      border: 2px solid #8b5a2b;
+      border: 2px solid red; /* Red border */
       border-radius: 5px;
       width: 80%;
       padding: 10px;
@@ -248,7 +240,53 @@
   <!-- Three.js and Dice Roller Script -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
-    // Custom function to create a pentagonal trapezohedron for the D10
+    // Dimensions for the square platform
+    const floorY = -0.5;
+    const floorSize = 24;      // Black floor is 24x24
+    const borderSize = 26;     // Red border is 26x26
+    const halfSize = floorSize / 2; // For collision checks
+
+    // Create a sprite with a smiley face drawn on a canvas
+    function createSmileyFaceSprite() {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Clear / transparent background
+      ctx.clearRect(0, 0, size, size);
+
+      // Draw a yellow circle
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#FFFF00';
+      ctx.fill();
+
+      // Eyes
+      ctx.beginPath();
+      ctx.arc(size / 3, size / 3, size / 15, 0, 2 * Math.PI);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(2 * size / 3, size / 3, size / 15, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Mouth (arc from 0 to Math.PI => half-circle)
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 3, 0, Math.PI);
+      ctx.lineWidth = size / 20;
+      ctx.strokeStyle = '#000000';
+      ctx.stroke();
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(3, 3, 1); // Adjust size as needed
+      return sprite;
+    }
+
+    // Custom geometry for the D10 (pentagonal trapezohedron)
     function createD10Geometry() {
       const alpha = 0.8;
       const phi = Math.PI / 10;
@@ -296,13 +334,16 @@
       }
 
       // Scene setup
-      const controlledAreaRadius = 7;
-      const floorY = -0.5;
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
 
       const container = document.getElementById('canvas-container');
-      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        1000
+      );
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(renderer.domElement);
@@ -314,8 +355,9 @@
       pointLight.position.set(10, 10, 10);
       scene.add(pointLight);
 
-      camera.position.z = 12;
-      camera.position.y = 5;
+      // Camera position
+      camera.position.z = 18;
+      camera.position.y = 8;
 
       // Starfield
       function createStars() {
@@ -335,35 +377,48 @@
       }
       createStars();
 
-      // Floor
-      const floorGeometry = new THREE.CircleGeometry(controlledAreaRadius, 32);
-      const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.8, metalness: 0.2 });
-      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = floorY;
-      scene.add(floor);
+      // Red square border plane (26x26)
+      const redPlaneGeometry = new THREE.PlaneGeometry(borderSize, borderSize);
+      const redPlaneMaterial = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        roughness: 0.8,
+        metalness: 0.2
+      });
+      const redPlane = new THREE.Mesh(redPlaneGeometry, redPlaneMaterial);
+      redPlane.rotation.x = -Math.PI / 2;
+      redPlane.position.y = floorY;
+      scene.add(redPlane);
 
-      // Border ring
-      const borderGeometry = new THREE.RingGeometry(controlledAreaRadius - 0.2, controlledAreaRadius, 64);
-      const borderMaterial = new THREE.MeshBasicMaterial({ color: 0x8b5a2b, side: THREE.DoubleSide });
-      const border = new THREE.Mesh(borderGeometry, borderMaterial);
-      border.rotation.x = -Math.PI / 2;
-      border.position.y = floorY + 0.05;
-      scene.add(border);
+      // Black square floor plane (24x24)
+      const blackPlaneGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
+      const blackPlaneMaterial = new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        roughness: 0.8,
+        metalness: 0.2
+      });
+      const blackPlane = new THREE.Mesh(blackPlaneGeometry, blackPlaneMaterial);
+      blackPlane.rotation.x = -Math.PI / 2;
+      blackPlane.position.y = floorY + 0.01;
+      scene.add(blackPlane);
+
+      // Smiley face in the middle
+      const smiley = createSmileyFaceSprite();
+      smiley.position.set(0, floorY + 0.02, 0);
+      scene.add(smiley);
 
       // Dice data
       const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
       const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
       const dice = [];
 
-      // Matching colors to your token color references:
+      // Dark Red, Blue, Purple, Green, Yellow, Orange
       const diceColors = {
-        d4:  0xB22222, // Firebrick
-        d6:  0x8B0000, // Dark Red
-        d8:  0x4169E1, // Royal Blue
-        d10: 0x191970, // Midnight Blue
-        d12: 0xDAA520, // Goldenrod
-        d20: 0xB8860B  // Dark Goldenrod
+        d4:  0x8B0000, /* Dark Red */
+        d6:  0x00008B, /* Dark Blue */
+        d8:  0x4B0082, /* Purple (Indigo) */
+        d10: 0x006400, /* Dark Green */
+        d12: 0xCCCC00, /* Yellow-ish (#CCCC00) */
+        d20: 0xFF8C00  /* Dark Orange */
       };
 
       const geometries = {
@@ -375,6 +430,7 @@
         d20: new THREE.IcosahedronGeometry(1)
       };
 
+      // Create a die with black wireframe edges
       function createDie(type) {
         const geometry = geometries[type];
         const color = diceColors[type];
@@ -385,9 +441,9 @@
         });
         const die = new THREE.Mesh(geometry, material);
 
-        // Edges for visual clarity
+        // Black wireframe for the edges
         const wireframeGeometry = new THREE.EdgesGeometry(geometry);
-        const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
         const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
         die.add(wireframe);
 
@@ -431,6 +487,7 @@
         }
       }
 
+      // Spread dice in a grid
       function positionDice() {
         if (dice.length === 0) return;
         const spacing = 3.0;
@@ -487,6 +544,7 @@
           );
         });
 
+        // After 2.5s, assume dice have settled
         setTimeout(() => {
           dice.forEach(die => {
             die.userData.isRolling = false;
@@ -496,6 +554,7 @@
         }, 2500);
       }
 
+      // Randomize initial position/rotation for dice before rolling
       function prepareDiceForRoll() {
         if (dice.length === 0) return;
         const spacing = 3.0;
@@ -519,40 +578,60 @@
         });
       }
 
+      // Simple square collision check
       function updateDicePhysics(delta) {
         const gravity = new THREE.Vector3(0, -9.8, 0);
+
         dice.forEach(die => {
           if (!die.userData.isRolling) return;
+
+          // Apply velocity
           die.position.addScaledVector(die.userData.velocity, delta);
           die.rotation.x += die.userData.angularVelocity.x * delta;
           die.rotation.y += die.userData.angularVelocity.y * delta;
           die.rotation.z += die.userData.angularVelocity.z * delta;
+
+          // Gravity & damping
           die.userData.velocity.addScaledVector(gravity, delta);
           die.userData.velocity.multiplyScalar(0.98);
           die.userData.angularVelocity.multiplyScalar(0.98);
 
+          // Floor collision
           const dieRadius = 0.8;
           if (die.position.y - dieRadius < floorY) {
             die.position.y = floorY + dieRadius;
             die.userData.velocity.y *= -0.5;
-            if (Math.abs(die.userData.velocity.y) < 1.0 && Math.abs(die.userData.velocity.y) > 0.1) {
-              die.userData.velocity.y = Math.sign(die.userData.velocity.y) * 1.0;
-            }
-            die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
-            die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
             die.userData.velocity.x *= 0.8;
             die.userData.velocity.z *= 0.8;
+            die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
+            die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
           }
-          const dist = Math.sqrt(die.position.x * die.position.x + die.position.z * die.position.z);
-          if (dist > controlledAreaRadius) {
-            const nx = die.position.x / dist;
-            const nz = die.position.z / dist;
-            die.position.x = nx * controlledAreaRadius;
-            die.position.z = nz * controlledAreaRadius;
-            const dot = die.userData.velocity.x * nx + die.userData.velocity.z * nz;
-            die.userData.velocity.x -= 2 * dot * nx * 0.8;
-            die.userData.velocity.z -= 2 * dot * nz * 0.8;
-            die.userData.velocity.y += 1.0;
+
+          // Square boundary collisions
+          if (die.position.x < -halfSize) {
+            die.position.x = -halfSize;
+            die.userData.velocity.x *= -0.5;
+            die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
+          }
+          if (die.position.x > halfSize) {
+            die.position.x = halfSize;
+            die.userData.velocity.x *= -0.5;
+            die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
+          }
+          if (die.position.z < -halfSize) {
+            die.position.z = -halfSize;
+            die.userData.velocity.z *= -0.5;
+            die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
+          }
+          if (die.position.z > halfSize) {
+            die.position.z = halfSize;
+            die.userData.velocity.z *= -0.5;
             die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
             die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
             die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
@@ -572,17 +651,20 @@
             const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
             const minDist = 1.8;
             if (distance < minDist) {
+              // Normal vector
               const nx = dx / distance;
               const ny = dy / distance;
               const nz = dz / distance;
-              const moveAmount = (minDist - distance) / 2;
-              die1.position.x -= nx * moveAmount;
-              die1.position.y -= ny * moveAmount;
-              die1.position.z -= nz * moveAmount;
-              die2.position.x += nx * moveAmount;
-              die2.position.y += ny * moveAmount;
-              die2.position.z += nz * moveAmount;
+              // Push them apart
+              const overlap = (minDist - distance) / 2;
+              die1.position.x -= nx * overlap;
+              die1.position.y -= ny * overlap;
+              die1.position.z -= nz * overlap;
+              die2.position.x += nx * overlap;
+              die2.position.y += ny * overlap;
+              die2.position.z += nz * overlap;
 
+              // Bounce velocities
               const dot1 = die1.userData.velocity.x * nx + die1.userData.velocity.y * ny + die1.userData.velocity.z * nz;
               const dot2 = die2.userData.velocity.x * nx + die2.userData.velocity.y * ny + die2.userData.velocity.z * nz;
               const bounce = 0.7;
@@ -593,6 +675,7 @@
               die2.userData.velocity.y += (dot1 - dot2) * ny * bounce;
               die2.userData.velocity.z += (dot1 - dot2) * nz * bounce;
 
+              // Extra spin
               const spinAmount = 5.0;
               die1.userData.angularVelocity.x += (Math.random() - 0.5) * spinAmount;
               die1.userData.angularVelocity.y += (Math.random() - 0.5) * spinAmount;
@@ -604,13 +687,14 @@
           }
         }
 
-        // Snap dice to rest
+        // Snap dice to rest if almost stopped
         dice.forEach(die => {
           if (!die.userData.isRolling &&
               die.userData.velocity.length() < 0.1 &&
               die.userData.angularVelocity.length() < 0.1) {
             const type = die.userData.type;
             const euler = new THREE.Euler().setFromQuaternion(die.quaternion);
+            // Snap rotation (rough approximation)
             if (type === 'd6') {
               euler.x = Math.round(euler.x / (Math.PI / 2)) * (Math.PI / 2);
               euler.z = Math.round(euler.z / (Math.PI / 2)) * (Math.PI / 2);
@@ -664,7 +748,6 @@
         const rollLog = document.getElementById('roll-log');
         let logText = '';
         for (let i = 0; i < rollLog.children.length; i++) {
-          // Each <li> element’s text content
           logText += rollLog.children[i].textContent.trim() + '\n';
         }
         navigator.clipboard.writeText(logText)
@@ -708,7 +791,7 @@
         renderer.setSize(container.clientWidth, container.clientHeight);
       });
 
-      // Start with one of each die
+      // Add one of each die to start
       addDie('d4');
       addDie('d6');
       addDie('d8');
