@@ -5,16 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>3D D&D Dice Roller</title>
   <link rel="icon" href="data:,">
+  <!-- Import Cinzel font from Google Fonts -->
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+
     body {
       margin: 0;
       background-color: #1a1a1a; /* Dark background */
       color: #fafafa;
-      font-family: Arial, sans-serif;
+      font-family: 'Cinzel', serif; /* Cinzel font */
       display: flex;
       flex-direction: column;
       align-items: center;
     }
+
     #controls {
       margin: 20px 0;
       display: flex;
@@ -114,7 +118,7 @@
 
     /* Dice result backgrounds (dark red, blue, purple, green, yellow, orange) */
     .d4-result    { background-color: rgba(139, 0, 0, 0.6); }    /* Dark Red */
-    .d6-result    { background-color: rgba(0, 0, 139, 0.6); }    /* Blue (DarkBlue) */
+    .d6-result    { background-color: rgba(0, 0, 139, 0.6); }    /* Dark Blue */
     .d8-result    { background-color: rgba(75, 0, 130, 0.6); }   /* Purple (Indigo) */
     .d10-result   { background-color: rgba(0, 100, 0, 0.6); }    /* Green (DarkGreen) */
     .d12-result   { background-color: rgba(204, 204, 0, 0.6); }  /* Yellow (#CCCC00) */
@@ -282,7 +286,10 @@
       const texture = new THREE.CanvasTexture(canvas);
       const material = new THREE.SpriteMaterial({ map: texture });
       const sprite = new THREE.Sprite(material);
-      sprite.scale.set(3, 3, 1); // Adjust size as needed
+
+      // Slightly smaller and raised so the bottom is visible
+      sprite.scale.set(2, 2, 1);       // Adjust size as needed
+      sprite.position.set(0, floorY + 0.25, 0); // Lift it above the floor
       return sprite;
     }
 
@@ -401,9 +408,8 @@
       blackPlane.position.y = floorY + 0.01;
       scene.add(blackPlane);
 
-      // Smiley face in the middle
+      // Smiley face in the middle (raised)
       const smiley = createSmileyFaceSprite();
-      smiley.position.set(0, floorY + 0.02, 0);
       scene.add(smiley);
 
       // Dice data
