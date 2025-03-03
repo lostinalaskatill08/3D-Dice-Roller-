@@ -173,6 +173,23 @@
     import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.module.js';
     import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 
+    // --- Create Starfield (Galaxy Background) ---
+    function createStars() {
+      const starCount = 1000;
+      const starGeometry = new THREE.BufferGeometry();
+      const starVertices = [];
+      for (let i = 0; i < starCount; i++) {
+        const x = Math.random() * 2000 - 1000;
+        const y = Math.random() * 2000 - 1000;
+        const z = Math.random() * 2000 - 1000;
+        starVertices.push(x, y, z);
+      }
+      starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
+      const stars = new THREE.Points(starGeometry, starMaterial);
+      scene.add(stars);
+    }
+
     // --- Custom D10 Geometry: Pentagonal Trapezohedron ---
     function createD10Geometry() {
       const alpha = 0.8;
@@ -188,12 +205,8 @@
         bottom.push(new THREE.Vector3(r * Math.cos(angleBottom), -cy, r * Math.sin(angleBottom)));
       }
       const vertices = [];
-      for (let i = 0; i < 5; i++) {
-        vertices.push(top[i]);
-      }
-      for (let i = 0; i < 5; i++) {
-        vertices.push(bottom[i]);
-      }
+      for (let i = 0; i < 5; i++) vertices.push(top[i]);
+      for (let i = 0; i < 5; i++) vertices.push(bottom[i]);
       const indices = [];
       for (let i = 0; i < 5; i++) {
         const t0 = i;
@@ -205,38 +218,36 @@
       }
       const geometry = new THREE.BufferGeometry();
       const positions = [];
-      for (let v of vertices) {
-        positions.push(v.x, v.y, v.z);
-      }
+      vertices.forEach(v => { positions.push(v.x, v.y, v.z); });
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       geometry.setIndex(indices);
       geometry.computeVertexNormals();
       return geometry;
     }
 
-    // --- Helper: Convert THREE.BufferGeometry to a Cannon ConvexPolyhedron ---
+    // --- Helper: Convert THREE.BufferGeometry to Cannon ConvexPolyhedron ---
     function createConvexShapeFromGeometry(geometry) {
-      const positionAttr = geometry.attributes.position;
+      const posAttr = geometry.attributes.position;
       const vertices = [];
-      for (let i = 0; i < positionAttr.count; i++) {
-        const vertex = new CANNON.Vec3().copy(new THREE.Vector3().fromBufferAttribute(positionAttr, i));
-        vertices.push(vertex);
+      for (let i = 0; i < posAttr.count; i++) {
+        const vertex = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+        vertices.push(new CANNON.Vec3(vertex.x, vertex.y, vertex.z));
       }
       const indices = geometry.index ? geometry.index.array : null;
       const faces = [];
       if (indices) {
         for (let i = 0; i < indices.length; i += 3) {
-          faces.push([ indices[i], indices[i+1], indices[i+2] ]);
+          faces.push([ indices[i], indices[i + 1], indices[i + 2] ]);
         }
       } else {
         for (let i = 0; i < vertices.length; i += 3) {
-          faces.push([ i, i+1, i+2 ]);
+          faces.push([ i, i + 1, i + 2 ]);
         }
       }
       return new CANNON.ConvexPolyhedron({ vertices, faces });
     }
 
-    // --- Setup Three.js Scene ---
+    // --- Setup Three.js Scene, Camera, Renderer ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
     const container = document.getElementById('canvas-container');
@@ -248,18 +259,21 @@
     camera.lookAt(0, 0, 0);
     scene.add(camera);
 
+    // Add starfield background
+    createStars();
+
     // --- Lighting ---
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
     const pointLight = new THREE.PointLight(0xffffff, 1);
     pointLight.position.set(10, 10, 10);
     scene.add(pointLight);
 
-    // --- Setup Cannon-es World ---
+    // --- Setup Cannon-es Physics World ---
     const world = new CANNON.World({
       gravity: new CANNON.Vec3(0, -9.82, 0),
       allowSleep: true
     });
-    // Use grid-based broadphase for efficient collision detection
+    // Grid-based broadphase (dividing world into a 10x10x10 grid)
     world.broadphase = new CANNON.GridBroadphase(
       new CANNON.Vec3(-20, -20, -20),
       new CANNON.Vec3(20, 20, 20),
@@ -270,37 +284,36 @@
     world.defaultContactMaterial.friction = 0.6;
     world.defaultContactMaterial.restitution = 0.3;
 
-    // --- Floor and Platform ---
+    // --- Floor and Border ---
     const controlledAreaRadius = 7;
     const floorY = -0.5;
     const floorGeometry = new THREE.CircleGeometry(controlledAreaRadius, 32);
     const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
     const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
-    floorMesh.rotation.x = -Math.PI/2;
+    floorMesh.rotation.x = -Math.PI / 2;
     floorMesh.position.y = floorY;
     scene.add(floorMesh);
-    // Cannon floor body
+    // Floor physics
     const floorBody = new CANNON.Body({ mass: 0 });
     floorBody.addShape(new CANNON.Plane());
     floorBody.quaternion.setFromEuler(-Math.PI/2, 0, 0);
     floorBody.position.y = floorY;
     world.addBody(floorBody);
-
-    // Border for the platform
+    // Border
     const borderGeometry = new THREE.RingGeometry(controlledAreaRadius - 0.2, controlledAreaRadius, 64);
     const borderMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444, side: THREE.DoubleSide });
     const borderMesh = new THREE.Mesh(borderGeometry, borderMaterial);
-    borderMesh.rotation.x = -Math.PI/2;
+    borderMesh.rotation.x = -Math.PI / 2;
     borderMesh.position.y = floorY + 0.05;
     scene.add(borderMesh);
 
     // --- Dice Management ---
-    const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+    const diceTypes = ['d4','d6','d8','d10','d12','d20'];
     const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
     const diceMeshes = [];
     const diceBodies = [];
 
-    // D&D–themed colors (note: D6 changed to dark gray)
+    // D&D-themed dice colors (D6 is dark gray)
     const diceColors = {
       d4: 0x8B0000,
       d6: 0x696969,
@@ -320,57 +333,46 @@
       d20: new THREE.IcosahedronGeometry(1)
     };
 
-    // Create physics shape – for d6 use Box; for others, create convex shape from geometry.
+    // Create physics shape (for d6 use Box; others use convex shape from geometry)
     function createPhysicsShape(type, geometry) {
       if (type === 'd6') {
-        const hx = 1.4/2, hy = 1.4/2, hz = 1.4/2;
-        return new CANNON.Box(new CANNON.Vec3(hx, hy, hz));
+        const halfExtents = new CANNON.Vec3(1.4/2, 1.4/2, 1.4/2);
+        return new CANNON.Box(halfExtents);
       } else {
         return createConvexShapeFromGeometry(geometry);
       }
     }
 
-    // Create a die (Three.js mesh and Cannon body) for a given type.
+    // Create a die (both Three.js mesh and Cannon body)
     function createDie(type) {
       const geom = geometries[type];
-      const material = new THREE.MeshStandardMaterial({
-        color: diceColors[type],
-        metalness: 0.3,
-        roughness: 0.2
-      });
-      const mesh = new THREE.Mesh(geom, material);
-      // Add wireframe
+      const meshMat = new THREE.MeshStandardMaterial({ color: diceColors[type], metalness: 0.3, roughness: 0.2 });
+      const mesh = new THREE.Mesh(geom, meshMat);
       const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0xffffff }));
       mesh.add(wireframe);
       mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
       scene.add(mesh);
 
-      // Create Cannon body for physics
       const shape = createPhysicsShape(type, geom);
       const body = new CANNON.Body({
         mass: 1,
         shape: shape,
         material: new CANNON.Material('dice')
       });
-      // Random initial position (spread out within controlled area)
       body.position.set((Math.random()-0.5)*8, 5 + Math.random(), (Math.random()-0.5)*8);
-      // Apply random initial velocity and angular velocity for a dynamic roll
       body.velocity.set((Math.random()-0.5)*5, Math.random()*5, (Math.random()-0.5)*5);
       body.angularVelocity.set((Math.random()-0.5)*25, (Math.random()-0.5)*25, (Math.random()-0.5)*25);
       body.linearDamping = 0.1;
       body.angularDamping = 0.2;
       body.sleepSpeedLimit = 0.1;
       body.sleepTimeLimit = 1.0;
-      world.addBody(body);
-
-      // Store additional info: type and a randomly computed roll result
       body.userData = { type: type, result: Math.floor(Math.random()*parseInt(type.slice(1)))+1 };
-
+      world.addBody(body);
       diceMeshes.push(mesh);
       diceBodies.push(body);
     }
 
-    // Functions to add and remove dice via UI
+    // UI functions: addDie, removeDie, positionDice, updateControls, rollDice
     function addDie(type) {
       if (diceCounts[type] < 10) {
         diceCounts[type]++;
@@ -395,8 +397,6 @@
         updateControls();
       }
     }
-
-    // Arrange dice in a grid for improved horizontal separation
     function positionDice() {
       const count = diceMeshes.length;
       if (count === 0) return;
@@ -410,12 +410,10 @@
         const col = i % cols;
         const x = col * spacing - offsetX;
         const z = row * spacing - offsetZ;
-        // Reposition dice bodies (only X and Z; Y remains as simulated)
         diceBodies[i].position.x = x + (Math.random()*0.5 - 0.25);
         diceBodies[i].position.z = z + (Math.random()*0.5 - 0.25);
       }
     }
-
     function updateControls() {
       diceTypes.forEach(type => {
         const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
@@ -424,8 +422,6 @@
         }
       });
     }
-
-    // When "Roll Dice" is pressed, reassign random velocities and update each die's random result.
     function rollDice() {
       if (diceBodies.length === 0) return;
       document.getElementById('roll-button').disabled = true;
@@ -436,7 +432,6 @@
         body.angularVelocity.set((Math.random()-0.5)*25, (Math.random()-0.5)*25, (Math.random()-0.5)*25);
         body.userData.result = Math.floor(Math.random()*parseInt(body.userData.type.slice(1)))+1;
       });
-      // Let simulation run for 2.5 seconds before displaying results.
       setTimeout(() => {
         const resultsByType = {};
         let total = 0;
@@ -484,7 +479,6 @@
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
       world.step(1/60, delta, 3);
-      // Synchronize each Three.js mesh with its Cannon body.
       for (let i = 0; i < diceMeshes.length; i++) {
         diceMeshes[i].position.copy(diceBodies[i].position);
         diceMeshes[i].quaternion.copy(diceBodies[i].quaternion);
@@ -506,6 +500,7 @@
     addDie('d10');
     addDie('d12');
     addDie('d20');
+    updateControls();
   </script>
 </body>
 </html>
