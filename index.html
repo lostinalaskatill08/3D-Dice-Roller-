@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D D&D Dice Roller with Physics</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D D&D Dice Roller</title>
   <link rel="icon" href="data:,">
   <style>
-    /* General layout & styling */
     body {
       margin: 0;
       background-color: #1a1a1a;
@@ -81,7 +80,7 @@
       overflow-y: auto;
       color: #fff;
     }
-    /* Header outside the scroll area */
+    /* Move the heading outside the scrolling area */
     #results-header {
       color: yellow;
       margin: 0 0 5px 0;
@@ -112,7 +111,7 @@
       border-radius: 3px;
       font-weight: bold;
     }
-    /* Die result backgrounds matching D&D-themed dice colors */
+    /* Dice result backgrounds matching dice colors */
     .d4-result { background-color: rgba(139, 0, 0, 0.5); }
     .d6-result { background-color: rgba(105, 105, 105, 0.5); }
     .d8-result { background-color: rgba(47, 79, 79, 0.5); }
@@ -168,339 +167,473 @@
     <ul id="roll-log"></ul>
   </div>
 
-  <!-- Load Three.js and Cannon-es as ES modules -->
-  <script type="module">
-    import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.module.js';
-    import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
-
-    // --- Create Starfield (Galaxy Background) ---
-    function createStars() {
-      const starCount = 1000;
-      const starGeometry = new THREE.BufferGeometry();
-      const starVertices = [];
-      for (let i = 0; i < starCount; i++) {
-        const x = Math.random() * 2000 - 1000;
-        const y = Math.random() * 2000 - 1000;
-        const z = Math.random() * 2000 - 1000;
-        starVertices.push(x, y, z);
-      }
-      starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
-      const stars = new THREE.Points(starGeometry, starMaterial);
-      scene.add(stars);
-    }
-
-    // --- Custom D10 Geometry: Pentagonal Trapezohedron ---
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script>
+    // Custom function to create a pentagonal trapezohedron for the D10
     function createD10Geometry() {
-      const alpha = 0.8;
-      const phi = Math.PI / 10;
-      const r = Math.sin(alpha);
-      const cy = Math.cos(alpha);
+      // Parameters chosen to yield a shape similar to a real D10.
+      const alpha = 0.8;         // Angle determining the vertical spread of top and bottom vertices
+      const phi = Math.PI / 10;    // 18° offset to rotate the top ring relative to the bottom ring
+      const r = Math.sin(alpha);   // horizontal radius
+      const cy = Math.cos(alpha);  // vertical coordinate for the top ring (and -cy for the bottom)
+      
       const top = [];
       const bottom = [];
       for (let i = 0; i < 5; i++) {
-        const angleTop = (2 * Math.PI * i / 5) + phi;
-        const angleBottom = (2 * Math.PI * i / 5) - phi;
+        let angleTop = (2 * Math.PI * i / 5) + phi;
+        let angleBottom = (2 * Math.PI * i / 5) - phi;
         top.push(new THREE.Vector3(r * Math.cos(angleTop), cy, r * Math.sin(angleTop)));
         bottom.push(new THREE.Vector3(r * Math.cos(angleBottom), -cy, r * Math.sin(angleBottom)));
       }
+      
+      // For a pentagonal trapezohedron, we have 10 faces.
+      // We construct each quadrilateral face (a kite) by combining adjacent vertices from the top and bottom rings.
+      // Since Three.js requires triangulated faces, we split each quadrilateral into 2 triangles.
       const vertices = [];
-      for (let i = 0; i < 5; i++) vertices.push(top[i]);
-      for (let i = 0; i < 5; i++) vertices.push(bottom[i]);
+      // Add top vertices (indices 0-4)
+      for (let i = 0; i < 5; i++) {
+        vertices.push(top[i].x, top[i].y, top[i].z);
+      }
+      // Add bottom vertices (indices 5-9)
+      for (let i = 0; i < 5; i++) {
+        vertices.push(bottom[i].x, bottom[i].y, bottom[i].z);
+      }
+      
       const indices = [];
       for (let i = 0; i < 5; i++) {
-        const t0 = i;
-        const t1 = (i + 1) % 5;
-        const b0 = i + 5;
-        const b1 = ((i + 1) % 5) + 5;
+        // Define indices for the quadrilateral face between top[i], bottom[i], top[(i+1)%5] and bottom[(i+1)%5]
+        let t0 = i;                   // top[i]
+        let t1 = (i + 1) % 5;           // top[(i+1)%5]
+        let b0 = i + 5;               // bottom[i]
+        let b1 = ((i + 1) % 5) + 5;     // bottom[(i+1)%5]
+        // Triangle 1: top[i], bottom[i], top[(i+1)%5]
         indices.push(t0, b0, t1);
+        // Triangle 2: bottom[i], bottom[(i+1)%5], top[(i+1)%5]
         indices.push(b0, b1, t1);
       }
+      
       const geometry = new THREE.BufferGeometry();
-      const positions = [];
-      vertices.forEach(v => { positions.push(v.x, v.y, v.z); });
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       geometry.setIndex(indices);
       geometry.computeVertexNormals();
       return geometry;
     }
 
-    // --- Helper: Convert THREE.BufferGeometry to Cannon ConvexPolyhedron ---
-    function createConvexShapeFromGeometry(geometry) {
-      const posAttr = geometry.attributes.position;
-      const vertices = [];
-      for (let i = 0; i < posAttr.count; i++) {
-        const vertex = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-        vertices.push(new CANNON.Vec3(vertex.x, vertex.y, vertex.z));
+    window.addEventListener('load', function() {
+      if (typeof THREE === 'undefined') {
+        console.error('Three.js failed to load. Check your internet connection or the CDN link.');
+        return;
       }
-      const indices = geometry.index ? geometry.index.array : null;
-      const faces = [];
-      if (indices) {
-        for (let i = 0; i < indices.length; i += 3) {
-          faces.push([ indices[i], indices[i + 1], indices[i + 2] ]);
+
+      // Increase the controlled area to allow for better horizontal separation.
+      const controlledAreaRadius = 7;
+      const floorY = -0.5;
+
+      // Scene setup
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+      const container = document.getElementById('canvas-container');
+      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+      const pointLight = new THREE.PointLight(0xffffff, 1);
+      pointLight.position.set(10, 10, 10);
+      scene.add(pointLight);
+
+      // Adjust camera to fit the larger platform
+      camera.position.z = 12;
+      camera.position.y = 5;
+
+      // Starfield for atmosphere
+      function createStars() {
+        const starCount = 1000;
+        const starGeometry = new THREE.BufferGeometry();
+        const starVertices = [];
+        for (let i = 0; i < starCount; i++) {
+          const x = Math.random() * 2000 - 1000;
+          const y = Math.random() * 2000 - 1000;
+          const z = Math.random() * 2000 - 1000;
+          starVertices.push(x, y, z);
         }
-      } else {
-        for (let i = 0; i < vertices.length; i += 3) {
-          faces.push([ i, i + 1, i + 2 ]);
-        }
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+        const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
       }
-      return new CANNON.ConvexPolyhedron({ vertices, faces });
-    }
+      createStars();
 
-    // --- Setup Three.js Scene, Camera, Renderer ---
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
-    const container = document.getElementById('canvas-container');
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-    const camera = new THREE.PerspectiveCamera(75, container.clientWidth/container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 5, 12);
-    camera.lookAt(0, 0, 0);
-    scene.add(camera);
-
-    // Add starfield background
-    createStars();
-
-    // --- Lighting ---
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(10, 10, 10);
-    scene.add(pointLight);
-
-    // --- Setup Cannon-es Physics World ---
-    const world = new CANNON.World({
-      gravity: new CANNON.Vec3(0, -9.82, 0),
-      allowSleep: true
-    });
-    // Grid-based broadphase (dividing world into a 10x10x10 grid)
-    world.broadphase = new CANNON.GridBroadphase(
-      new CANNON.Vec3(-20, -20, -20),
-      new CANNON.Vec3(20, 20, 20),
-      10, 10, 10
-    );
-    world.solver.iterations = 15;
-    world.solver.tolerance = 0.001;
-    world.defaultContactMaterial.friction = 0.6;
-    world.defaultContactMaterial.restitution = 0.3;
-
-    // --- Floor and Border ---
-    const controlledAreaRadius = 7;
-    const floorY = -0.5;
-    const floorGeometry = new THREE.CircleGeometry(controlledAreaRadius, 32);
-    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
-    const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
-    floorMesh.rotation.x = -Math.PI / 2;
-    floorMesh.position.y = floorY;
-    scene.add(floorMesh);
-    // Floor physics
-    const floorBody = new CANNON.Body({ mass: 0 });
-    floorBody.addShape(new CANNON.Plane());
-    floorBody.quaternion.setFromEuler(-Math.PI/2, 0, 0);
-    floorBody.position.y = floorY;
-    world.addBody(floorBody);
-    // Border
-    const borderGeometry = new THREE.RingGeometry(controlledAreaRadius - 0.2, controlledAreaRadius, 64);
-    const borderMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444, side: THREE.DoubleSide });
-    const borderMesh = new THREE.Mesh(borderGeometry, borderMaterial);
-    borderMesh.rotation.x = -Math.PI / 2;
-    borderMesh.position.y = floorY + 0.05;
-    scene.add(borderMesh);
-
-    // --- Dice Management ---
-    const diceTypes = ['d4','d6','d8','d10','d12','d20'];
-    const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
-    const diceMeshes = [];
-    const diceBodies = [];
-
-    // D&D-themed dice colors (D6 is dark gray)
-    const diceColors = {
-      d4: 0x8B0000,
-      d6: 0x696969,
-      d8: 0x2F4F4F,
-      d10: 0x556B2F,
-      d12: 0xB8860B,
-      d20: 0x483D8B
-    };
-
-    // Three.js geometries for dice
-    const geometries = {
-      d4: new THREE.TetrahedronGeometry(1),
-      d6: new THREE.BoxGeometry(1.4, 1.4, 1.4),
-      d8: new THREE.OctahedronGeometry(1),
-      d10: createD10Geometry(),
-      d12: new THREE.DodecahedronGeometry(1),
-      d20: new THREE.IcosahedronGeometry(1)
-    };
-
-    // Create physics shape (for d6 use Box; others use convex shape from geometry)
-    function createPhysicsShape(type, geometry) {
-      if (type === 'd6') {
-        const halfExtents = new CANNON.Vec3(1.4/2, 1.4/2, 1.4/2);
-        return new CANNON.Box(halfExtents);
-      } else {
-        return createConvexShapeFromGeometry(geometry);
-      }
-    }
-
-    // Create a die (both Three.js mesh and Cannon body)
-    function createDie(type) {
-      const geom = geometries[type];
-      const meshMat = new THREE.MeshStandardMaterial({ color: diceColors[type], metalness: 0.3, roughness: 0.2 });
-      const mesh = new THREE.Mesh(geom, meshMat);
-      const wireframe = new THREE.LineSegments(new THREE.EdgesGeometry(geom), new THREE.LineBasicMaterial({ color: 0xffffff }));
-      mesh.add(wireframe);
-      mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
-      scene.add(mesh);
-
-      const shape = createPhysicsShape(type, geom);
-      const body = new CANNON.Body({
-        mass: 1,
-        shape: shape,
-        material: new CANNON.Material('dice')
+      // Floor and border for the controlled area
+      const floorGeometry = new THREE.CircleGeometry(controlledAreaRadius, 32);
+      const floorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x000000, 
+        roughness: 0.8, 
+        metalness: 0.2 
       });
-      body.position.set((Math.random()-0.5)*8, 5 + Math.random(), (Math.random()-0.5)*8);
-      body.velocity.set((Math.random()-0.5)*5, Math.random()*5, (Math.random()-0.5)*5);
-      body.angularVelocity.set((Math.random()-0.5)*25, (Math.random()-0.5)*25, (Math.random()-0.5)*25);
-      body.linearDamping = 0.1;
-      body.angularDamping = 0.2;
-      body.sleepSpeedLimit = 0.1;
-      body.sleepTimeLimit = 1.0;
-      body.userData = { type: type, result: Math.floor(Math.random()*parseInt(type.slice(1)))+1 };
-      world.addBody(body);
-      diceMeshes.push(mesh);
-      diceBodies.push(body);
-    }
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = floorY;
+      scene.add(floor);
 
-    // UI functions: addDie, removeDie, positionDice, updateControls, rollDice
-    function addDie(type) {
-      if (diceCounts[type] < 10) {
-        diceCounts[type]++;
-        createDie(type);
-        positionDice();
-        updateControls();
+      const borderGeometry = new THREE.RingGeometry(controlledAreaRadius - 0.2, controlledAreaRadius, 64);
+      const borderMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff4444, 
+        side: THREE.DoubleSide 
+      });
+      const border = new THREE.Mesh(borderGeometry, borderMaterial);
+      border.rotation.x = -Math.PI / 2;
+      border.position.y = floorY + 0.05;
+      scene.add(border);
+
+      // Dice management
+      const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+      const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
+      const dice = [];
+
+      // Dice colors (note: D6 changed from brown to dark gray)
+      const diceColors = {
+        d4: 0x8B0000,    // Dark Red
+        d6: 0x696969,    // Dark Gray
+        d8: 0x2F4F4F,    // Dark Slate Gray
+        d10: 0x556B2F,   // Dark Olive Green
+        d12: 0xB8860B,   // Dark Goldenrod
+        d20: 0x483D8B    // Dark Slate Blue
+      };
+
+      // Geometries for dice – note the D10 now uses our custom geometry.
+      const geometries = {
+        d4: new THREE.TetrahedronGeometry(1),
+        d6: new THREE.BoxGeometry(1.4, 1.4, 1.4),
+        d8: new THREE.OctahedronGeometry(1),
+        d10: createD10Geometry(),
+        d12: new THREE.DodecahedronGeometry(1),
+        d20: new THREE.IcosahedronGeometry(1)
+      };
+
+      // Create die with improved visual appearance
+      function createDie(type) {
+        const geometry = geometries[type];
+        const color = diceColors[type];
+        const material = new THREE.MeshStandardMaterial({
+          color: color,
+          metalness: 0.3,
+          roughness: 0.2
+        });
+        const die = new THREE.Mesh(geometry, material);
+
+        // Add wireframe for edge highlighting
+        const wireframeGeometry = new THREE.EdgesGeometry(geometry);
+        const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+        die.add(wireframe);
+
+        // Random starting rotation
+        die.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2
+        );
+
+        die.userData = {
+          type: type,
+          result: 0,
+          velocity: new THREE.Vector3(0, 0, 0),
+          angularVelocity: new THREE.Vector3(0, 0, 0),
+          isRolling: false
+        };
+
+        return die;
       }
-    }
-    function removeDie(type) {
-      if (diceCounts[type] > 0) {
-        diceCounts[type]--;
-        for (let i = 0; i < diceBodies.length; i++) {
-          if (diceBodies[i].userData.type === type) {
-            scene.remove(diceMeshes[i]);
-            world.removeBody(diceBodies[i]);
-            diceMeshes.splice(i, 1);
-            diceBodies.splice(i, 1);
-            break;
+
+      function addDie(type) {
+        if (diceCounts[type] < 10) {
+          diceCounts[type]++;
+          const die = createDie(type);
+          dice.push(die);
+          scene.add(die);
+          positionDice();
+          updateControls();
+        }
+      }
+
+      function removeDie(type) {
+        if (diceCounts[type] > 0) {
+          diceCounts[type]--;
+          const index = dice.findIndex(d => d.userData.type === type);
+          if (index !== -1) {
+            scene.remove(dice[index]);
+            dice.splice(index, 1);
+            positionDice();
+            updateControls();
           }
         }
-        positionDice();
-        updateControls();
       }
-    }
-    function positionDice() {
-      const count = diceMeshes.length;
-      if (count === 0) return;
-      const spacing = 3.0;
-      const rows = Math.ceil(Math.sqrt(count));
-      const cols = Math.ceil(count / rows);
-      const offsetX = ((cols - 1) * spacing) / 2;
-      const offsetZ = ((rows - 1) * spacing) / 2;
-      for (let i = 0; i < count; i++) {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        const x = col * spacing - offsetX;
-        const z = row * spacing - offsetZ;
-        diceBodies[i].position.x = x + (Math.random()*0.5 - 0.25);
-        diceBodies[i].position.z = z + (Math.random()*0.5 - 0.25);
+
+      // Position dice in a grid with increased horizontal spacing.
+      function positionDice() {
+        if (dice.length === 0) return;
+        const spacing = 3.0;
+        const rows = Math.ceil(Math.sqrt(dice.length));
+        const cols = Math.ceil(dice.length / rows);
+        const offsetX = ((cols - 1) * spacing) / 2;
+        const offsetZ = ((rows - 1) * spacing) / 2;
+        dice.forEach((die, index) => {
+          const row = Math.floor(index / cols);
+          const col = index % cols;
+          die.position.set(
+            col * spacing - offsetX,
+            0.6 + Math.random() * 0.2,
+            row * spacing - offsetZ
+          );
+          const scale = 0.9 + Math.random() * 0.2;
+          die.scale.set(scale, scale, scale);
+          die.rotation.set(
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2
+          );
+        });
       }
-    }
-    function updateControls() {
-      diceTypes.forEach(type => {
-        const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
-        if (control) {
-          control.textContent = `${type.toUpperCase()}: ${diceCounts[type]}`;
+
+      function updateControls() {
+        diceTypes.forEach(type => {
+          const control = document.querySelector(`.dice-control[data-type="${type}"] span`);
+          if (control) {
+            control.textContent = `${type.toUpperCase()}: ${diceCounts[type]}`;
+          }
+        });
+      }
+
+      function rollDice() {
+        if (dice.length === 0) return;
+        const rollButton = document.getElementById('roll-button');
+        rollButton.disabled = true;
+        prepareDiceForRoll();
+        dice.forEach(die => {
+          die.userData.isRolling = true;
+          die.userData.result = Math.floor(Math.random() * parseInt(die.userData.type.slice(1))) + 1;
+          die.userData.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 3,
+            Math.random() * 5 + 3,
+            (Math.random() - 0.5) * 3
+          );
+          // Increased angular velocity for more pronounced spin.
+          die.userData.angularVelocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 25,
+            (Math.random() - 0.5) * 25,
+            (Math.random() - 0.5) * 25
+          );
+        });
+        setTimeout(() => {
+          dice.forEach(die => {
+            die.userData.isRolling = false;
+          });
+          displayResults();
+          rollButton.disabled = false;
+        }, 2500);
+      }
+
+      // Prepare dice for roll with increased spacing.
+      function prepareDiceForRoll() {
+        if (dice.length === 0) return;
+        const spacing = 3.0;
+        const rows = Math.ceil(Math.sqrt(dice.length));
+        const cols = Math.ceil(dice.length / rows);
+        const offsetX = ((cols - 1) * spacing) / 2;
+        const offsetZ = ((rows - 1) * spacing) / 2;
+        dice.forEach((die, index) => {
+          const row = Math.floor(index / cols);
+          const col = index % cols;
+          die.position.set(
+            col * spacing - offsetX + (Math.random() * 0.5 - 0.25),
+            3 + Math.random(),
+            row * spacing - offsetZ + (Math.random() * 0.5 - 0.25)
+          );
+          die.userData.initialX = die.position.x;
+          die.userData.initialZ = die.position.z;
+          die.rotation.set(
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2
+          );
+        });
+      }
+
+      // Physics update: gravity, collisions, and snapping dice to a natural resting position.
+      function updateDicePhysics(delta) {
+        const gravity = new THREE.Vector3(0, -9.8, 0);
+        dice.forEach(die => {
+          if (!die.userData.isRolling) return;
+          die.position.addScaledVector(die.userData.velocity, delta);
+          die.rotation.x += die.userData.angularVelocity.x * delta;
+          die.rotation.y += die.userData.angularVelocity.y * delta;
+          die.rotation.z += die.userData.angularVelocity.z * delta;
+          die.userData.velocity.addScaledVector(gravity, delta);
+          die.userData.velocity.multiplyScalar(0.98);
+          die.userData.angularVelocity.multiplyScalar(0.98);
+          const dieRadius = 0.8;
+          if (die.position.y - dieRadius < floorY) {
+            die.position.y = floorY + dieRadius;
+            die.userData.velocity.y *= -0.5;
+            if (Math.abs(die.userData.velocity.y) < 1.0 && Math.abs(die.userData.velocity.y) > 0.1) {
+              die.userData.velocity.y = Math.sign(die.userData.velocity.y) * 1.0;
+            }
+            die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
+            die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
+            die.userData.velocity.x *= 0.8;
+            die.userData.velocity.z *= 0.8;
+          }
+          const dist = Math.sqrt(die.position.x * die.position.x + die.position.z * die.position.z);
+          if (dist > controlledAreaRadius) {
+            const nx = die.position.x / dist;
+            const nz = die.position.z / dist;
+            die.position.x = nx * controlledAreaRadius;
+            die.position.z = nz * controlledAreaRadius;
+            const dot = die.userData.velocity.x * nx + die.userData.velocity.z * nz;
+            die.userData.velocity.x -= 2 * dot * nx * 0.8;
+            die.userData.velocity.z -= 2 * dot * nz * 0.8;
+            die.userData.velocity.y += 1.0;
+            die.userData.angularVelocity.x += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.y += (Math.random() - 0.5) * 10;
+            die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
+          }
+        });
+
+        // Dice-to-dice collisions
+        for (let i = 0; i < dice.length; i++) {
+          if (!dice[i].userData.isRolling) continue;
+          for (let j = i + 1; j < dice.length; j++) {
+            if (!dice[j].userData.isRolling) continue;
+            const die1 = dice[i];
+            const die2 = dice[j];
+            const dx = die2.position.x - die1.position.x;
+            const dy = die2.position.y - die1.position.y;
+            const dz = die2.position.z - die1.position.z;
+            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            const minDist = 1.8;
+            if (distance < minDist) {
+              const nx = dx / distance;
+              const ny = dy / distance;
+              const nz = dz / distance;
+              const moveAmount = (minDist - distance) / 2;
+              die1.position.x -= nx * moveAmount;
+              die1.position.y -= ny * moveAmount;
+              die1.position.z -= nz * moveAmount;
+              die2.position.x += nx * moveAmount;
+              die2.position.y += ny * moveAmount;
+              die2.position.z += nz * moveAmount;
+              const dot1 = die1.userData.velocity.x * nx + die1.userData.velocity.y * ny + die1.userData.velocity.z * nz;
+              const dot2 = die2.userData.velocity.x * nx + die2.userData.velocity.y * ny + die2.userData.velocity.z * nz;
+              const bounce = 0.7;
+              die1.userData.velocity.x += (dot2 - dot1) * nx * bounce;
+              die1.userData.velocity.y += (dot2 - dot1) * ny * bounce;
+              die1.userData.velocity.z += (dot2 - dot1) * nz * bounce;
+              die2.userData.velocity.x += (dot1 - dot2) * nx * bounce;
+              die2.userData.velocity.y += (dot1 - dot2) * ny * bounce;
+              die2.userData.velocity.z += (dot1 - dot2) * nz * bounce;
+              const spinAmount = 5.0;
+              die1.userData.angularVelocity.x += (Math.random() - 0.5) * spinAmount;
+              die1.userData.angularVelocity.y += (Math.random() - 0.5) * spinAmount;
+              die1.userData.angularVelocity.z += (Math.random() - 0.5) * spinAmount;
+              die2.userData.angularVelocity.x += (Math.random() - 0.5) * spinAmount;
+              die2.userData.angularVelocity.y += (Math.random() - 0.5) * spinAmount;
+              die2.userData.angularVelocity.z += (Math.random() - 0.5) * spinAmount;
+            }
+          }
         }
-      });
-    }
-    function rollDice() {
-      if (diceBodies.length === 0) return;
-      document.getElementById('roll-button').disabled = true;
-      positionDice();
-      diceBodies.forEach(body => {
-        body.wakeUp();
-        body.velocity.set((Math.random()-0.5)*5, Math.random()*5+3, (Math.random()-0.5)*5);
-        body.angularVelocity.set((Math.random()-0.5)*25, (Math.random()-0.5)*25, (Math.random()-0.5)*25);
-        body.userData.result = Math.floor(Math.random()*parseInt(body.userData.type.slice(1)))+1;
-      });
-      setTimeout(() => {
+
+        // Snap dice to a natural resting position when nearly at rest.
+        dice.forEach(die => {
+          if (!die.userData.isRolling &&
+              die.userData.velocity.length() < 0.1 &&
+              die.userData.angularVelocity.length() < 0.1) {
+            const type = die.userData.type;
+            const euler = new THREE.Euler().setFromQuaternion(die.quaternion);
+            if (type === 'd6') {
+              euler.x = Math.round(euler.x / (Math.PI / 2)) * (Math.PI / 2);
+              euler.z = Math.round(euler.z / (Math.PI / 2)) * (Math.PI / 2);
+            } else {
+              euler.x = Math.round(euler.x / (Math.PI / 4)) * (Math.PI / 4);
+              euler.y = Math.round(euler.y / (Math.PI / 4)) * (Math.PI / 4);
+              euler.z = Math.round(euler.z / (Math.PI / 4)) * (Math.PI / 4);
+            }
+            die.quaternion.setFromEuler(euler);
+            die.userData.velocity.set(0, 0, 0);
+            die.userData.angularVelocity.set(0, 0, 0);
+          }
+        });
+      }
+
+      function displayResults() {
+        const rollLog = document.getElementById('roll-log');
         const resultsByType = {};
-        let total = 0;
-        diceBodies.forEach(body => {
-          const type = body.userData.type;
-          const res = body.userData.result;
-          if (!resultsByType[type]) resultsByType[type] = [];
-          resultsByType[type].push(res);
-          total += res;
+        let totalSum = 0;
+        dice.forEach(die => {
+          const type = die.userData.type;
+          const result = die.userData.result;
+          if (!resultsByType[type]) {
+            resultsByType[type] = [];
+          }
+          resultsByType[type].push(result);
+          totalSum += result;
         });
         let resultHTML = '';
-        for (let type in resultsByType) {
-          resultHTML += `<span class="${type}-result">${type.toUpperCase()}: [${resultsByType[type].join(', ')}]</span> `;
+        for (const type in resultsByType) {
+          if (resultsByType[type].length > 0) {
+            resultHTML += `<span class="${type}-result">${type.toUpperCase()}: [${resultsByType[type].join(', ')}]</span> `;
+          }
         }
-        resultHTML += `<span class="total-result">Total: ${total}</span>`;
+        resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
         const logEntry = document.createElement('li');
         logEntry.innerHTML = resultHTML;
-        const rollLog = document.getElementById('roll-log');
         rollLog.insertBefore(logEntry, rollLog.firstChild);
         while (rollLog.children.length > 10) {
           rollLog.removeChild(rollLog.lastChild);
         }
-        document.getElementById('roll-button').disabled = false;
-      }, 2500);
-    }
-
-    // Attach event listeners to UI buttons.
-    document.querySelectorAll('.dice-control .add').forEach(button => {
-      button.addEventListener('click', function() {
-        const type = this.parentElement.dataset.type;
-        addDie(type);
-      });
-    });
-    document.querySelectorAll('.dice-control .remove').forEach(button => {
-      button.addEventListener('click', function() {
-        const type = this.parentElement.dataset.type;
-        removeDie(type);
-      });
-    });
-    document.getElementById('roll-button').addEventListener('click', rollDice);
-
-    // --- Animation Loop ---
-    const clock = new THREE.Clock();
-    function animate() {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      world.step(1/60, delta, 3);
-      for (let i = 0; i < diceMeshes.length; i++) {
-        diceMeshes[i].position.copy(diceBodies[i].position);
-        diceMeshes[i].quaternion.copy(diceBodies[i].quaternion);
       }
-      renderer.render(scene, camera);
-    }
-    animate();
 
-    window.addEventListener('resize', () => {
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      document.querySelectorAll('.dice-control .add').forEach(button => {
+        button.addEventListener('click', function() {
+          const type = this.parentElement.dataset.type;
+          addDie(type);
+        });
+      });
+      document.querySelectorAll('.dice-control .remove').forEach(button => {
+        button.addEventListener('click', function() {
+          const type = this.parentElement.dataset.type;
+          removeDie(type);
+        });
+      });
+      document.getElementById('roll-button').addEventListener('click', rollDice);
+
+      let lastTime = 0;
+      function animate(time) {
+        requestAnimationFrame(animate);
+        const delta = Math.min((time - lastTime) / 1000, 0.1);
+        lastTime = time;
+        updateDicePhysics(delta);
+        renderer.render(scene, camera);
+      }
+      animate(0);
+
+      window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+
+      // Add one of each die initially
+      addDie('d4');
+      addDie('d6');
+      addDie('d8');
+      addDie('d10');
+      addDie('d12');
+      addDie('d20');
     });
-
-    // Add one of each die initially.
-    addDie('d4');
-    addDie('d6');
-    addDie('d8');
-    addDie('d10');
-    addDie('d12');
-    addDie('d20');
-    updateControls();
   </script>
 </body>
 </html>
