@@ -46,7 +46,6 @@
       cursor: pointer;
       font-weight: bold;
       border-radius: 3px;
-      /* Ensure the Cinzel font is applied to the button text as well */
       font-family: 'Cinzel', serif;
     }
     .dice-control button:hover {
@@ -57,7 +56,7 @@
     #canvas-container {
       width: 80%;
       height: 400px;
-      border: 2px solid red; /* Red border */
+      border: 2px solid red;
       position: relative;
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(255,255,255,0.1);
@@ -76,7 +75,7 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
-      font-family: 'Cinzel', serif; /* Cinzel for button text */
+      font-family: 'Cinzel', serif;
     }
     #roll-button:hover,
     #copy-log-button:hover {
@@ -92,15 +91,15 @@
       text-align: center;
       width: 80%;
       color: #fafafa;
-      font-family: 'Cinzel', serif; /* Cinzel for heading */
+      font-family: 'Cinzel', serif;
     }
     #results {
       background-color: #2a2a2a;
       padding: 10px;
-      border: 2px solid red; /* Red border */
+      border: 2px solid red;
       border-radius: 5px;
       width: 80%;
-      max-height: 300px; /* Adjust as desired */
+      max-height: 300px;
       overflow-y: auto;
       color: #fafafa;
       margin-bottom: 10px;
@@ -121,16 +120,16 @@
       background-color: #2a2a2a;
     }
 
-    /* Dice result backgrounds (dark red, blue, purple, green, yellow, orange) */
-    .d4-result    { background-color: rgba(139, 0, 0, 0.6); }    /* Dark Red */
-    .d6-result    { background-color: rgba(0, 0, 139, 0.6); }    /* Dark Blue */
-    .d8-result    { background-color: rgba(75, 0, 130, 0.6); }   /* Purple (Indigo) */
-    .d10-result   { background-color: rgba(0, 100, 0, 0.6); }    /* Green (DarkGreen) */
-    .d12-result   { background-color: rgba(204, 204, 0, 0.6); }  /* Yellow (#CCCC00) */
-    .d20-result   { background-color: rgba(255, 140, 0, 0.6); }  /* Orange (DarkOrange) */
+    /* Dice result backgrounds */
+    .d4-result    { background-color: rgba(139, 0, 0, 0.6); }
+    .d6-result    { background-color: rgba(0, 0, 139, 0.6); }
+    .d8-result    { background-color: rgba(75, 0, 130, 0.6); }
+    .d10-result   { background-color: rgba(0, 100, 0, 0.6); }
+    .d12-result   { background-color: rgba(204, 204, 0, 0.6); }
+    .d20-result   { background-color: rgba(255, 140, 0, 0.6); }
 
     .total-result {
-      background-color: #8b5a2b;
+      background-color: red; /* Updated to match border */
       color: #fafafa;
       padding: 3px 8px;
       border-radius: 4px;
@@ -143,7 +142,7 @@
     #dice-info {
       background-color: #2a2a2a;
       color: #fafafa;
-      border: 2px solid red; /* Red border */
+      border: 2px solid red;
       border-radius: 5px;
       width: 80%;
       padding: 10px;
@@ -252,56 +251,41 @@
   <!-- Three.js and Dice Roller Script -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script>
-    // Dimensions for the square platform
     const floorY = -0.5;
-    const floorSize = 24;      // Black floor is 24x24
-    const borderSize = 26;     // Red border is 26x26
-    const halfSize = floorSize / 2; // For collision checks
-
-    // We'll store shooting stars in an array
+    const floorSize = 24;
+    const borderSize = 26;
+    const halfSize = floorSize / 2;
     const shootingStars = [];
 
-    // Helper for random range
     function randomBetween(min, max) {
       return Math.random() * (max - min) + min;
     }
 
-    // Function to spawn a single shooting star behind the platform
     function spawnShootingStar() {
-      // A small white sphere for the star
       const geometry = new THREE.SphereGeometry(0.15, 8, 8);
       const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const star = new THREE.Mesh(geometry, material);
-
-      // Position it far behind the platform (negative z) and somewhat above the platform
       star.position.set(
-        randomBetween(-30, 30),   // X range
-        randomBetween(10, 40),    // Y range above the floor
-        randomBetween(-200, -300) // Z range behind the camera
+        randomBetween(-30, 30),
+        randomBetween(10, 40),
+        randomBetween(-200, -300)
       );
-
-      // Move it toward the camera (positive z direction) with some random x drift
       star.userData.velocity = new THREE.Vector3(
-        randomBetween(-1, 1),    // slight horizontal drift
-        randomBetween(-0.2, -0.5),  // maybe it falls a bit
-        randomBetween(50, 80)    // speed toward +Z
+        randomBetween(-1, 1),
+        randomBetween(-0.2, -0.5),
+        randomBetween(50, 80)
       );
-
       scene.add(star);
       shootingStars.push(star);
     }
 
-    // Update shooting stars: move them and remove when off-screen
     function updateShootingStars(delta) {
       for (let i = shootingStars.length - 1; i >= 0; i--) {
         const star = shootingStars[i];
-        // Move star by velocity * delta
         star.position.addScaledVector(star.userData.velocity, delta);
-
-        // If the star passes beyond some boundary, remove it
         if (
-          star.position.z > 50 ||  // in front of the camera
-          star.position.y < -10 || // too far down
+          star.position.z > 50 ||
+          star.position.y < -10 ||
           star.position.x < -100 || star.position.x > 100
         ) {
           scene.remove(star);
@@ -310,13 +294,11 @@
       }
     }
 
-    // Custom geometry for the D10 (pentagonal trapezohedron)
     function createD10Geometry() {
       const alpha = 0.8;
       const phi = Math.PI / 10;
       const r = Math.sin(alpha);
       const cy = Math.cos(alpha);
-
       const top = [];
       const bottom = [];
       for (let i = 0; i < 5; i++) {
@@ -325,7 +307,6 @@
         top.push(new THREE.Vector3(r * Math.cos(angleTop), cy, r * Math.sin(angleTop)));
         bottom.push(new THREE.Vector3(r * Math.cos(angleBottom), -cy, r * Math.sin(angleBottom)));
       }
-
       const vertices = [];
       for (let i = 0; i < 5; i++) {
         vertices.push(top[i].x, top[i].y, top[i].z);
@@ -333,7 +314,6 @@
       for (let i = 0; i < 5; i++) {
         vertices.push(bottom[i].x, bottom[i].y, bottom[i].z);
       }
-
       const indices = [];
       for (let i = 0; i < 5; i++) {
         let t0 = i;
@@ -343,7 +323,6 @@
         indices.push(t0, b0, t1);
         indices.push(b0, b1, t1);
       }
-
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       geometry.setIndex(indices);
@@ -355,17 +334,14 @@
     const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
     const diceCounts = { d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0 };
     const dice = [];
-
-    // Dark Red, Blue, Purple, Green, Yellow, Orange
     const diceColors = {
-      d4:  0x8B0000, /* Dark Red */
-      d6:  0x00008B, /* Dark Blue */
-      d8:  0x4B0082, /* Purple (Indigo) */
-      d10: 0x006400, /* Dark Green */
-      d12: 0xCCCC00, /* Yellow-ish (#CCCC00) */
-      d20: 0xFF8C00  /* Dark Orange */
+      d4:  0x8B0000,
+      d6:  0x00008B,
+      d8:  0x4B0082,
+      d10: 0x006400,
+      d12: 0xCCCC00,
+      d20: 0xFF8C00
     };
-
     const geometries = {
       d4:  new THREE.TetrahedronGeometry(1),
       d6:  new THREE.BoxGeometry(1.4, 1.4, 1.4),
@@ -375,7 +351,6 @@
       d20: new THREE.IcosahedronGeometry(1)
     };
 
-    // Create a die with black wireframe edges
     function createDie(type) {
       const geometry = geometries[type];
       const color = diceColors[type];
@@ -385,19 +360,15 @@
         roughness: 0.2
       });
       const die = new THREE.Mesh(geometry, material);
-
-      // Black wireframe for the edges
       const wireframeGeometry = new THREE.EdgesGeometry(geometry);
       const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
       const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
       die.add(wireframe);
-
       die.rotation.set(
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2
       );
-
       die.userData = {
         type: type,
         result: 0,
@@ -432,7 +403,6 @@
       }
     }
 
-    // Spread dice in a grid
     function positionDice() {
       if (dice.length === 0) return;
       const spacing = 3.0;
@@ -472,7 +442,6 @@
       const rollButton = document.getElementById('roll-button');
       rollButton.disabled = true;
       prepareDiceForRoll();
-
       dice.forEach(die => {
         die.userData.isRolling = true;
         const sides = parseInt(die.userData.type.slice(1));
@@ -488,8 +457,6 @@
           (Math.random() - 0.5) * 25
         );
       });
-
-      // After 2.5s, assume dice have settled
       setTimeout(() => {
         dice.forEach(die => {
           die.userData.isRolling = false;
@@ -499,7 +466,6 @@
       }, 2500);
     }
 
-    // Randomize initial position/rotation for dice before rolling
     function prepareDiceForRoll() {
       if (dice.length === 0) return;
       const spacing = 3.0;
@@ -523,25 +489,17 @@
       });
     }
 
-    // Simple square collision check
     function updateDicePhysics(delta) {
       const gravity = new THREE.Vector3(0, -9.8, 0);
-
       dice.forEach(die => {
         if (!die.userData.isRolling) return;
-
-        // Apply velocity
         die.position.addScaledVector(die.userData.velocity, delta);
         die.rotation.x += die.userData.angularVelocity.x * delta;
         die.rotation.y += die.userData.angularVelocity.y * delta;
         die.rotation.z += die.userData.angularVelocity.z * delta;
-
-        // Gravity & damping
         die.userData.velocity.addScaledVector(gravity, delta);
         die.userData.velocity.multiplyScalar(0.98);
         die.userData.angularVelocity.multiplyScalar(0.98);
-
-        // Floor collision
         const dieRadius = 0.8;
         if (die.position.y - dieRadius < floorY) {
           die.position.y = floorY + dieRadius;
@@ -551,8 +509,6 @@
           die.userData.angularVelocity.x += (Math.random() - 0.5) * 5;
           die.userData.angularVelocity.z += (Math.random() - 0.5) * 5;
         }
-
-        // Square boundary collisions
         if (die.position.x < -halfSize) {
           die.position.x = -halfSize;
           die.userData.velocity.x *= -0.5;
@@ -582,8 +538,6 @@
           die.userData.angularVelocity.z += (Math.random() - 0.5) * 10;
         }
       });
-
-      // Dice-to-dice collisions
       for (let i = 0; i < dice.length; i++) {
         if (!dice[i].userData.isRolling) continue;
         for (let j = i + 1; j < dice.length; j++) {
@@ -596,11 +550,9 @@
           const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
           const minDist = 1.8;
           if (distance < minDist) {
-            // Normal vector
             const nx = dx / distance;
             const ny = dy / distance;
             const nz = dz / distance;
-            // Push them apart
             const overlap = (minDist - distance) / 2;
             die1.position.x -= nx * overlap;
             die1.position.y -= ny * overlap;
@@ -608,8 +560,6 @@
             die2.position.x += nx * overlap;
             die2.position.y += ny * overlap;
             die2.position.z += nz * overlap;
-
-            // Bounce velocities
             const dot1 = die1.userData.velocity.x * nx + die1.userData.velocity.y * ny + die1.userData.velocity.z * nz;
             const dot2 = die2.userData.velocity.x * nx + die2.userData.velocity.y * ny + die2.userData.velocity.z * nz;
             const bounce = 0.7;
@@ -619,8 +569,6 @@
             die2.userData.velocity.x += (dot1 - dot2) * nx * bounce;
             die2.userData.velocity.y += (dot1 - dot2) * ny * bounce;
             die2.userData.velocity.z += (dot1 - dot2) * nz * bounce;
-
-            // Extra spin
             const spinAmount = 5.0;
             die1.userData.angularVelocity.x += (Math.random() - 0.5) * spinAmount;
             die1.userData.angularVelocity.y += (Math.random() - 0.5) * spinAmount;
@@ -631,15 +579,12 @@
           }
         }
       }
-
-      // Snap dice to rest if almost stopped
       dice.forEach(die => {
         if (!die.userData.isRolling &&
             die.userData.velocity.length() < 0.1 &&
             die.userData.angularVelocity.length() < 0.1) {
           const type = die.userData.type;
           const euler = new THREE.Euler().setFromQuaternion(die.quaternion);
-          // Snap rotation (rough approximation)
           if (type === 'd6') {
             euler.x = Math.round(euler.x / (Math.PI / 2)) * (Math.PI / 2);
             euler.z = Math.round(euler.z / (Math.PI / 2)) * (Math.PI / 2);
@@ -659,7 +604,6 @@
       const rollLog = document.getElementById('roll-log');
       const resultsByType = {};
       let totalSum = 0;
-
       dice.forEach(die => {
         const type = die.userData.type;
         const result = die.userData.result;
@@ -669,7 +613,6 @@
         resultsByType[type].push(result);
         totalSum += result;
       });
-
       let resultHTML = '';
       for (const type in resultsByType) {
         if (resultsByType[type].length > 0) {
@@ -677,18 +620,14 @@
         }
       }
       resultHTML += `<span class="total-result">Total: ${totalSum}</span>`;
-
       const logEntry = document.createElement('li');
       logEntry.innerHTML = resultHTML;
       rollLog.insertBefore(logEntry, rollLog.firstChild);
-
-      // Keep only the most recent 10 rolls
       while (rollLog.children.length > 10) {
         rollLog.removeChild(rollLog.lastChild);
       }
     }
 
-    // Copy Log functionality
     function copyLog() {
       const rollLog = document.getElementById('roll-log');
       let logText = '';
@@ -696,35 +635,24 @@
         logText += rollLog.children[i].textContent.trim() + '\n';
       }
       navigator.clipboard.writeText(logText)
-        .then(() => {
-          alert('Roll log copied to clipboard!');
-        })
-        .catch(err => {
-          console.error('Failed to copy log:', err);
-        });
+        .then(() => { alert('Roll log copied to clipboard!'); })
+        .catch(err => { console.error('Failed to copy log:', err); });
     }
 
     function initScene() {
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000000);
-
       camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
       canvasContainer.appendChild(renderer.domElement);
-
-      // Lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
       scene.add(ambientLight);
       const pointLight = new THREE.PointLight(0xffffff, 1);
       pointLight.position.set(10, 10, 10);
       scene.add(pointLight);
-
-      // Camera position
       camera.position.z = 18;
       camera.position.y = 8;
-
-      // Starfield
       function createStars() {
         const starCount = 1000;
         const starGeometry = new THREE.BufferGeometry();
@@ -741,8 +669,6 @@
         scene.add(stars);
       }
       createStars();
-
-      // Red square border plane (26x26)
       const redPlaneGeometry = new THREE.PlaneGeometry(borderSize, borderSize);
       const redPlaneMaterial = new THREE.MeshStandardMaterial({
         color: 0xff0000,
@@ -753,8 +679,6 @@
       redPlane.rotation.x = -Math.PI / 2;
       redPlane.position.y = floorY;
       scene.add(redPlane);
-
-      // Black square floor plane (24x24)
       const blackPlaneGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
       const blackPlaneMaterial = new THREE.MeshStandardMaterial({
         color: 0x000000,
@@ -768,7 +692,6 @@
     }
 
     let canvasContainer;
-
     window.addEventListener('load', function() {
       if (typeof THREE === 'undefined') {
         console.error('Three.js failed to load. Check your internet connection or the CDN link.');
@@ -776,8 +699,6 @@
       }
       canvasContainer = document.getElementById('canvas-container');
       initScene();
-
-      // Event listeners
       document.querySelectorAll('.dice-control .add').forEach(button => {
         button.addEventListener('click', function() {
           const type = this.parentElement.dataset.type;
@@ -792,39 +713,28 @@
       });
       document.getElementById('roll-button').addEventListener('click', rollDice);
       document.getElementById('copy-log-button').addEventListener('click', copyLog);
-
-      // Add one of each die to start
       addDie('d4');
       addDie('d6');
       addDie('d8');
       addDie('d10');
       addDie('d12');
       addDie('d20');
-
-      // Animation loop
       let lastTime = 0;
       function animate(time) {
         requestAnimationFrame(animate);
         const delta = Math.min((time - lastTime) / 1000, 0.1);
         lastTime = time;
-
-        // Increase chance from 0.002 to ~0.01 (1% per frame),
-        // and spawn 2-4 stars at once.
         if (Math.random() < 0.01) {
-          const starCount = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
+          const starCount = Math.floor(Math.random() * 3) + 2;
           for (let i = 0; i < starCount; i++) {
             spawnShootingStar();
           }
         }
-
-        // Update physics
         updateDicePhysics(delta);
         updateShootingStars(delta);
-
         renderer.render(scene, camera);
       }
       animate(0);
-
       window.addEventListener('resize', () => {
         camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
         camera.updateProjectionMatrix();
