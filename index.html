@@ -807,24 +807,29 @@
       const glowMesh = new THREE.Mesh(geometry.clone().scale(1.05, 1.05, 1.05), glowMaterial);
       die.add(glowMesh);
       
-      // Add edges for better visibility
+      // Add white edges for better visibility
       const wireframeGeometry = new THREE.EdgesGeometry(geometry);
       const wireframeMaterial = new THREE.LineBasicMaterial({ 
-        color: 0x000000,
-        linewidth: 2 
+        color: 0xFFFFFF,  // White edges
+        linewidth: 2,     // Make lines thicker
+        opacity: 0.9,     // Slightly transparent
+        transparent: true
       });
       const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
       die.add(wireframe);
       
-      // Add highlights
-      const highlightMaterial = new THREE.LineBasicMaterial({ 
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.3,
-        linewidth: 1 
-      });
-      const highlightEdges = new THREE.LineSegments(wireframeGeometry, highlightMaterial);
-      die.add(highlightEdges);
+      // Add black inner edges for contrast
+      const innerWireframe = new THREE.LineSegments(
+        wireframeGeometry,
+        new THREE.LineBasicMaterial({ 
+          color: 0x000000,
+          linewidth: 1,
+          opacity: 0.5,
+          transparent: true
+        })
+      );
+      innerWireframe.scale.set(0.98, 0.98, 0.98); // Slightly smaller
+      die.add(innerWireframe);
       
       die.rotation.set(
         Math.random() * Math.PI * 2,
@@ -1057,7 +1062,7 @@
 
     // Enhanced physics for more realistic dice behavior
     function updateDicePhysics(delta) {
-      const gravity = new THREE.Vector3(0, -9.8, 0);
+      const gravity = new THREE.Vector3(0, -18.0, 0); // Increased gravity for faster falling
       
       dice.forEach(die => {
         // Skip physics for dice marked for removal
