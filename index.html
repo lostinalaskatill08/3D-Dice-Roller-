@@ -979,19 +979,19 @@
       // Add magical particles for dice roll
       createMagicalParticles();
       
-      // Extend the rolling time significantly to let dice settle completely
+      // Reduced settling time for more natural-looking results
       setTimeout(() => {
         dice.forEach(die => {
           die.userData.isRolling = false;
           die.userData.glowMesh.material.opacity = 0.1;
         });
         
-        // Additional delay before showing results to ensure dice have completely settled
+        // Shorter delay before showing results
         setTimeout(() => {
           displayResults();
           rollButton.disabled = false;
-        }, 1500);
-      }, 5000);
+        }, 800);
+      }, 3000);
     }
     
     // Simplified particle effect with minimal particles
