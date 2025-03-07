@@ -943,13 +943,7 @@
       
       // No sound effects
       
-      // Camera shake effect
-      cameraShake = { 
-        intensity: 0.4,
-        duration: 1.0,
-        progress: 0,
-        originalPosition: camera.position.clone()
-      };
+      // No camera shake
       
       prepareDiceForRoll();
       
@@ -980,19 +974,19 @@
       // Add magical particles for dice roll
       createMagicalParticles();
       
-      // Extend the rolling time to let dice settle completely
+      // Extend the rolling time significantly to let dice settle completely
       setTimeout(() => {
         dice.forEach(die => {
           die.userData.isRolling = false;
           die.userData.glowMesh.material.opacity = 0.1;
         });
         
-        // Additional delay before showing results to ensure dice have settled
+        // Additional delay before showing results to ensure dice have completely settled
         setTimeout(() => {
           displayResults();
           rollButton.disabled = false;
-        }, 1000);
-      }, 3500);
+        }, 1500);
+      }, 5000);
     }
     
     // Simplified particle effect with minimal particles
@@ -1110,9 +1104,9 @@
         
         // Apply gravity and damping
         die.userData.velocity.addScaledVector(gravity, delta);
-        // Increased damping for more realistic settling
-        die.userData.velocity.multiplyScalar(0.96);
-        die.userData.angularVelocity.multiplyScalar(0.95);
+        // More aggressive damping for faster settling
+        die.userData.velocity.multiplyScalar(0.92);
+        die.userData.angularVelocity.multiplyScalar(0.92);
         
         const dieRadius = 0.8;
         
@@ -1224,12 +1218,12 @@
         }
       }
       
-      // Stabilize dice when they come to rest
+      // Make dice very sensitive to stabilizing
       dice.forEach(die => {
         // More strict settling criteria for stable final positions
         if (!die.userData.isRolling &&
-            die.userData.velocity.length() < 0.05 &&
-            die.userData.angularVelocity.length() < 0.05) {
+            die.userData.velocity.length() < 0.03 &&
+            die.userData.angularVelocity.length() < 0.03) {
           const type = die.userData.type;
           const euler = new THREE.Euler().setFromQuaternion(die.quaternion);
           
@@ -1393,7 +1387,7 @@
         .catch(err => { console.error('Failed to copy log:', err); });
     }
     
-    // Camera shake effect
+    // Camera shake disabled
     let cameraShake = {
       intensity: 0,
       duration: 0,
@@ -1402,20 +1396,7 @@
     };
     
     function updateCameraShake(delta) {
-      if (cameraShake.progress < cameraShake.duration) {
-        const strength = cameraShake.intensity * (1 - cameraShake.progress / cameraShake.duration);
-        
-        camera.position.set(
-          cameraShake.originalPosition.x + (Math.random() - 0.5) * strength,
-          cameraShake.originalPosition.y + (Math.random() - 0.5) * strength,
-          cameraShake.originalPosition.z + (Math.random() - 0.5) * strength
-        );
-        
-        cameraShake.progress += delta;
-      } else if (cameraShake.originalPosition) {
-        camera.position.copy(cameraShake.originalPosition);
-        cameraShake.originalPosition = null;
-      }
+      // Do nothing - camera shake disabled
     }
     
     // Easing functions for animations
