@@ -868,14 +868,22 @@
         const index = dice.findIndex(d => d.userData.type === type);
         if (index !== -1) {
           const die = dice[index];
+          
+          // Immediately disable physics for this die to prevent interaction
           die.userData.isDisappearing = true;
           die.userData.disappearProgress = 0;
+          die.userData.isRolling = false;
           
+          // Disable collision detection by moving out of the way temporarily
+          die.position.y = 50; // Move far away from scene
+          
+          // Remove the die from the physics simulation immediately
           setTimeout(() => {
             scene.remove(die);
+            // Remove from the dice array
             dice.splice(dice.indexOf(die), 1);
             positionDice();
-          }, 500);
+          }, 100);
           
           updateControls();
         }
@@ -972,15 +980,19 @@
       // Add magical particles for dice roll
       createMagicalParticles();
       
+      // Extend the rolling time to let dice settle completely
       setTimeout(() => {
         dice.forEach(die => {
           die.userData.isRolling = false;
           die.userData.glowMesh.material.opacity = 0.1;
         });
         
-        displayResults();
-        rollButton.disabled = false;
-      }, 2500);
+        // Additional delay before showing results to ensure dice have settled
+        setTimeout(() => {
+          displayResults();
+          rollButton.disabled = false;
+        }, 1000);
+      }, 3500);
     }
     
     // Simplified particle effect with minimal particles
@@ -1054,6 +1066,11 @@
       const gravity = new THREE.Vector3(0, -9.8, 0);
       
       dice.forEach(die => {
+        // Skip physics for dice marked for removal
+        if (die.userData.isDisappearing) {
+          return;
+        }
+        
         // Handle appearing animation
         if (die.userData.isAppearing) {
           die.userData.appearProgress += delta * 5;
@@ -1066,22 +1083,6 @@
           die.scale.lerpVectors(
             new THREE.Vector3(0.01, 0.01, 0.01),
             die.userData.targetScale,
-            progress
-          );
-          return;
-        }
-        
-        // Handle disappearing animation
-        if (die.userData.isDisappearing) {
-          die.userData.disappearProgress += delta * 5;
-          if (die.userData.disappearProgress >= 1) {
-            die.userData.disappearProgress = 1;
-          }
-          
-          const progress = die.userData.disappearProgress;
-          die.scale.lerpVectors(
-            die.userData.targetScale,
-            new THREE.Vector3(0.01, 0.01, 0.01),
             progress
           );
           return;
@@ -1109,8 +1110,9 @@
         
         // Apply gravity and damping
         die.userData.velocity.addScaledVector(gravity, delta);
-        die.userData.velocity.multiplyScalar(0.98);
-        die.userData.angularVelocity.multiplyScalar(0.98);
+        // Increased damping for more realistic settling
+        die.userData.velocity.multiplyScalar(0.96);
+        die.userData.angularVelocity.multiplyScalar(0.95);
         
         const dieRadius = 0.8;
         
@@ -1162,10 +1164,12 @@
       
       // Dice collision detection and response
       for (let i = 0; i < dice.length; i++) {
-        if (!dice[i].userData.isRolling) continue;
+        // Skip dice that are not rolling or are disappearing
+        if (!dice[i].userData.isRolling || dice[i].userData.isDisappearing) continue;
         
         for (let j = i + 1; j < dice.length; j++) {
-          if (!dice[j].userData.isRolling) continue;
+          // Skip dice that are not rolling or are disappearing
+          if (!dice[j].userData.isRolling || dice[j].userData.isDisappearing) continue;
           
           const die1 = dice[i];
           const die2 = dice[j];
@@ -1222,9 +1226,10 @@
       
       // Stabilize dice when they come to rest
       dice.forEach(die => {
+        // More strict settling criteria for stable final positions
         if (!die.userData.isRolling &&
-            die.userData.velocity.length() < 0.1 &&
-            die.userData.angularVelocity.length() < 0.1) {
+            die.userData.velocity.length() < 0.05 &&
+            die.userData.angularVelocity.length() < 0.05) {
           const type = die.userData.type;
           const euler = new THREE.Euler().setFromQuaternion(die.quaternion);
           
