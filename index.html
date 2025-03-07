@@ -853,6 +853,12 @@
       if (diceCounts[type] < 10) {
         diceCounts[type]++;
         const die = createDie(type);
+        
+        // Ensure color is correct
+        const color = diceColors[type];
+        die.material.color.set(color);
+        die.userData.glowMesh.material.color.set(color);
+        
         dice.push(die);
         scene.add(die);
         
@@ -983,7 +989,15 @@
       setTimeout(() => {
         dice.forEach(die => {
           die.userData.isRolling = false;
-          die.userData.glowMesh.material.opacity = 0.1;
+          // Reset any previous critical hit/miss effects
+        die.userData.isCritical = false;
+        
+        // Reset glow color and opacity to original values
+        die.userData.glowMesh.material.color.set(die.userData.originalColor);
+        die.userData.glowMesh.material.opacity = 0.1;
+        
+        // Reset main material color to ensure consistency
+        die.material.color.set(die.userData.originalColor);
         });
         
         // Shorter delay before showing results
