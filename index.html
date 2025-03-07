@@ -961,15 +961,15 @@
         
         // Enhanced physics for more dramatic rolls
         die.userData.velocity = new THREE.Vector3(
-          (Math.random() - 0.5) * 4,
-          Math.random() * 8 + 5,
-          (Math.random() - 0.5) * 4
+          (Math.random() - 0.5) * 5,  // More horizontal spread
+          Math.random() * 10 + 8,     // Higher starting velocity upward
+          (Math.random() - 0.5) * 5
         );
         
         die.userData.angularVelocity = new THREE.Vector3(
-          (Math.random() - 0.5) * 30,
-          (Math.random() - 0.5) * 30,
-          (Math.random() - 0.5) * 30
+          (Math.random() - 0.5) * 70,  // Much higher rotation speed
+          (Math.random() - 0.5) * 70,  // Much higher rotation speed
+          (Math.random() - 0.5) * 70   // Much higher rotation speed
         );
         
         // Add glow effect during rolling
@@ -1046,9 +1046,10 @@
         const row = Math.floor(index / cols);
         const col = index % cols;
         
+        // Higher initial position for more dramatic drop
         die.position.set(
           col * spacing - offsetX + (Math.random() * 0.5 - 0.25),
-          4 + Math.random() * 2,
+          7 + Math.random() * 2, // Higher initial position
           row * spacing - offsetZ + (Math.random() * 0.5 - 0.25)
         );
         
@@ -1109,9 +1110,16 @@
         
         // Apply gravity and damping
         die.userData.velocity.addScaledVector(gravity, delta);
-        // More aggressive damping for faster settling
-        die.userData.velocity.multiplyScalar(0.92);
-        die.userData.angularVelocity.multiplyScalar(0.92);
+        // Less air resistance during free fall
+        if (die.position.y > floorY + 2) {
+          // Less damping when in air (free fall)
+          die.userData.velocity.multiplyScalar(0.98);
+          die.userData.angularVelocity.multiplyScalar(0.98);
+        } else {
+          // More damping when near or on the ground
+          die.userData.velocity.multiplyScalar(0.92);
+          die.userData.angularVelocity.multiplyScalar(0.92);
+        }
         
         const dieRadius = 0.8;
         
